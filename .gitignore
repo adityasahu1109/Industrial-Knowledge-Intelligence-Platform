@@ -1,0 +1,30 @@
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm/
+frontend/node_modules/
+frontend/dist/
+
+# Python & Backend
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+backend/venv/
+.venv/
+env/
+.env
+backend/.env
+*.db
+backend/industrial_knowledge.db
+backend/chroma_db/
+backend/uploads/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Docker
+neo4j_data/
