@@ -29,19 +29,37 @@ export function GraphExplorer() {
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-gray-900 rounded-lg border border-gray-800 overflow-hidden shadow-xl">
-      <div className="flex items-center gap-3 p-4 border-b border-gray-800 bg-gray-900/50">
-        <Network className="w-5 h-5 text-indigo-400" />
-        <h2 className="text-lg font-semibold text-gray-100">Knowledge Graph Explorer</h2>
+    <div className="h-full flex flex-col bg-surface-alt rounded-xl border border-border overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-surface-alt z-10 relative">
+        <div className="flex items-center gap-3">
+          <Network className="w-4 h-4 text-data" />
+          <h2 className="text-sm font-semibold text-text">Knowledge Graph Explorer</h2>
+        </div>
+        
+        {/* Legend */}
+        <div className="flex items-center gap-4 text-[10px] uppercase tracking-wider text-text-dim font-medium">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-data"></span> Equipment
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-critical"></span> Event
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-warning"></span> Date
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-primary"></span> Other
+          </div>
+        </div>
       </div>
       
-      <div ref={containerRef} className="flex-1 relative bg-[#0a0a0a]">
+      <div ref={containerRef} className="flex-1 relative bg-surface">
         {loading ? (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-500">
-            <Activity className="w-6 h-6 animate-pulse mr-2" /> Loading graph...
+          <div className="absolute inset-0 flex items-center justify-center text-text-dim">
+            <Activity className="w-5 h-5 animate-pulse mr-2" /> Loading graph...
           </div>
         ) : data.nodes.length === 0 ? (
-          <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+          <div className="absolute inset-0 flex items-center justify-center text-text-dim">
             No graph data found. Wait for ingestion entity extraction.
           </div>
         ) : (
@@ -51,19 +69,18 @@ export function GraphExplorer() {
             height={dimensions.height}
             graphData={data}
             nodeLabel="name"
-            nodeColor={(n: any) => n.label === 'Equipment' ? '#6366f1' : (n.label === 'Event' ? '#ef4444' : '#14b8a6')}
-            linkColor={() => '#334155'}
+            nodeColor={(n: any) => n.label === 'Equipment' ? '#818cf8' : (n.label === 'Event' ? '#ef4444' : (n.label === 'Date' ? '#f59e0b' : '#22d3ee'))}
+            linkColor={() => '#1e293b'}
             nodeRelSize={6}
             nodeCanvasObjectMode={() => 'after'}
             nodeCanvasObject={(node: any, ctx, globalScale) => {
-              // Show text labels only when zoomed in
               if (globalScale >= 1.5) {
                 const label = node.name;
                 const fontSize = 12 / globalScale;
                 ctx.font = `${fontSize}px Sans-Serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillStyle = 'rgba(226, 232, 240, 0.8)';
                 ctx.fillText(label, node.x, node.y + (6 + fontSize));
               }
             }}

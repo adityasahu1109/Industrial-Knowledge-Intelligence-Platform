@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { UploadCloud, File as FileIcon, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { UploadCloud, AlertCircle, Loader2 } from 'lucide-react';
 import { fetchJson } from '../../api/client';
 
 export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => void }) {
@@ -57,10 +57,10 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
 
   return (
     <div 
-      className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+      className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
         isDragging 
-          ? 'border-primary bg-primary/5' 
-          : 'border-white/20 bg-white/5 hover:border-primary/50 hover:bg-white/10'
+          ? 'border-primary bg-primary/5 scale-[1.01]' 
+          : 'border-border bg-surface-alt/30 hover:border-primary/30 hover:bg-primary/5'
       }`}
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
@@ -76,26 +76,26 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
         accept="application/pdf"
       />
       
-      <div className="flex justify-center mb-4 text-text-muted">
+      <div className="flex justify-center mb-4 text-text-dim">
         {uploading ? (
-          <Loader2 size={40} className="animate-spin text-primary" />
+          <Loader2 size={48} className="animate-spin text-primary" />
         ) : error ? (
-          <AlertCircle size={40} className="text-danger" />
+          <AlertCircle size={48} className="text-critical" />
         ) : (
-          <UploadCloud size={40} className={isDragging ? 'text-primary' : ''} />
+          <UploadCloud size={48} className={isDragging ? 'text-primary transition-colors' : ''} />
         )}
       </div>
       
-      <h3 className="text-lg font-medium mb-1">
-        {uploading ? 'Uploading and processing...' : 'Drop documents here'}
+      <h3 className="text-lg font-medium mb-1 text-text-muted">
+        {uploading ? 'Uploading and processing...' : 'Drag & drop industrial documents'}
       </h3>
-      <p className="text-sm text-text-muted mb-4">
-        {error ? <span className="text-danger">{error}</span> : 'Supports PDF files up to 50MB'}
+      <p className="text-xs text-text-dim mb-4">
+        {error ? <span className="text-critical">{error}</span> : 'PDF files up to 50MB'}
       </p>
       
       <button 
         disabled={uploading}
-        className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm transition-colors disabled:opacity-50"
+        className="px-5 py-2 bg-surface-raised border border-border rounded-lg text-sm text-text-muted hover:text-text hover:border-border-active transition-all disabled:opacity-50"
       >
         Select Files
       </button>

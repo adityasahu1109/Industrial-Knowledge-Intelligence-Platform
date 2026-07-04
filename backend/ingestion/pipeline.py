@@ -53,24 +53,29 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         # 5. Store in ChromaDB
         add_chunks(chunks, embeddings)
         
-        # 5.5 Extract Entities and build Knowledge Graph
-        print(f"Extracting entities for {len(chunks)} chunks...")
-        # Batch chunks to reduce LLM calls
-        batch_size = 3
-        for i in range(0, len(chunks), batch_size):
-            batch = chunks[i:i+batch_size]
-            combined_text = "\n\n".join([c['text'] for c in batch])
-            try:
-                store_entities_in_graph(doc_id, combined_text)
-            except Exception as e:
-                print(f"Warning: Entity extraction failed for batch {i}: {e}")
-            print(f"Entities extracted for {min(i+batch_size, len(chunks))}/{len(chunks)} chunks...")
-        
-        # 6. Mark complete
+        # 6. Mark complete IMMEDIATELY -- user can now chat
         doc.status = 'complete'
         doc.completed_at = datetime.utcnow()
         db.commit()
-        print(f"Ingestion complete for {filename} ({len(chunks)} chunks)")
+        print(f"Ingestion complete for {filename} ({len(chunks)} chunks) -- chat ready")
+        
+        # 7. Entity extraction (non-blocking background stage)
+        try:
+            print(f"[Stage 2] Extracting entities for {len(chunks)} chunks...")
+            # Batch chunks to reduce LLM calls
+            batch_size = 3
+            for i in range(0, len(chunks), batch_size):
+                batch = chunks[i:i+batch_size]
+                combined_text = "\n\n".join([c['text'] for c in batch])
+                try:
+                    store_entities_in_graph(doc_id, combined_text)
+                except Exception as e:
+                    print(f"Warning: Entity extraction failed for batch {i}: {e}")
+                print(f"[Stage 2] Entities extracted for {min(i+batch_size, len(chunks))}/{len(chunks)} chunks...")
+            print(f"[Stage 2] Graph population complete for {filename}")
+        except Exception as e:
+            print(f"[Stage 2] Entity extraction failed for {filename}: {e}")
+            # Document remains 'complete' -- chat still works
         
     except Exception as e:
         print(f"Ingestion failed for {filename}: {e}")

@@ -12,7 +12,7 @@ function App() {
         <Sidebar />
         <div className="flex-1 flex flex-col h-full overflow-hidden relative">
           <Header />
-          <main className="flex-1 overflow-auto relative p-4">
+          <main className="flex-1 overflow-auto relative">
             <Routes>
               <Route path="/" element={<Navigate to="/chat" replace />} />
               <Route path="/chat" element={<ChatPage />} />
