@@ -28,7 +28,7 @@ def verify_models():
             # We don't want to hard crash here during dev, but we want a clear error
             print("Backend might fail when these models are invoked.", file=sys.stderr)
         else:
-            print(f"✅ Ollama models verified: {required}")
+            print(f"Ollama models verified: {required}")
     except Exception as e:
         print(f"ERROR connecting to Ollama: {e}", file=sys.stderr)
         print("Please ensure Ollama is running.", file=sys.stderr)
@@ -42,6 +42,7 @@ def chat_stream(system: str, user: str) -> Generator[str, None, None]:
             {"role": "user", "content": user}
         ],
         stream=True,
+        keep_alive=-1,
         options={"temperature": 0.2, "num_ctx": 8192}
     )
     for chunk in stream:
@@ -55,6 +56,7 @@ def chat_json(system: str, user: str) -> dict:
             {"role": "system", "content": system},
             {"role": "user", "content": user}
         ],
+        keep_alive=-1,
         options={"temperature": 0.1}
     )
     raw = resp['message']['content']
@@ -68,5 +70,5 @@ def chat_json(system: str, user: str) -> dict:
 
 def embed(text: str) -> list[float]:
     """Generate embedding via nomic-embed-text."""
-    resp = ollama.embeddings(model=EMBED_MODEL, prompt=text)
+    resp = ollama.embeddings(model=EMBED_MODEL, prompt=text, keep_alive=-1)
     return resp["embedding"]

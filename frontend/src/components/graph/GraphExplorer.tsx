@@ -54,6 +54,20 @@ export function GraphExplorer() {
             nodeColor={(n: any) => n.label === 'Equipment' ? '#6366f1' : (n.label === 'Event' ? '#ef4444' : '#14b8a6')}
             linkColor={() => '#334155'}
             nodeRelSize={6}
+            nodeCanvasObjectMode={() => 'after'}
+            nodeCanvasObject={(node: any, ctx, globalScale) => {
+              // Show text labels only when zoomed in
+              if (globalScale >= 1.5) {
+                const label = node.name;
+                const fontSize = 12 / globalScale;
+                ctx.font = `${fontSize}px Sans-Serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fillText(label, node.x, node.y + (6 + fontSize));
+              }
+            }}
+            linkLabel={(link: any) => link.type || 'RELATED_TO'}
             linkDirectionalArrowLength={3.5}
             linkDirectionalArrowRelPos={1}
             onNodeClick={(node: any) => {

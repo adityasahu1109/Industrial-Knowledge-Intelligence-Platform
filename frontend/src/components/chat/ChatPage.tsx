@@ -15,19 +15,7 @@ export function ChatPage() {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingText]);
 
-  // When streaming finishes, save the assistant message
-  useEffect(() => {
-    if (!loading && streamingText) {
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: streamingText,
-        sources: streamingSources
-      }]);
-    }
-  }, [loading, streamingText, streamingSources]);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
@@ -40,7 +28,14 @@ export function ChatPage() {
       content: userQuery
     }]);
 
-    query(userQuery);
+    const result = await query(userQuery);
+    
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      role: 'assistant',
+      content: result.text,
+      sources: result.sources
+    }]);
   };
 
   return (

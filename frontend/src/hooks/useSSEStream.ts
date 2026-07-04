@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { StreamSource } from "../types/chat";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
@@ -7,17 +7,26 @@ export function useSSEStream() {
   const [text, setText] = useState("");
   const [sources, setSources] = useState<StreamSource[]>([]);
   const [loading, setLoading] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const query = useCallback(async (userQuery: string) => {
+  const query = useCallback(async (userQuery: string): Promise<{text: string, sources: StreamSource[]}> => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     setText("");
     setSources([]);
     setLoading(true);
+    let finalText = "";
+    let finalSources: StreamSource[] = [];
 
     try {
       const resp = await fetch(`${API_URL}/chat/query`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userQuery, mode: "detailed" }),
+        signal: abortControllerRef.current.signal
       });
 
       if (!resp.ok) {
@@ -42,21 +51,27 @@ export function useSSEStream() {
             const payload = JSON.parse(payloadStr);
 
             if (!payload.done) {
-              setText(prev => prev + payload.token);
+              finalText += payload.token;
+              setText(finalText);
             } else {
-              setSources(payload.sources ?? []);
-              setLoading(false);
+              finalSources = payload.sources ?? [];
+              setSources(finalSources);
             }
           } catch (e) {
             console.error("Error parsing SSE payload:", e, payloadStr);
           }
         }
       }
-    } catch (e) {
-      console.error("Chat error:", e);
-      setText((prev) => prev + "\n\n**Error:** Failed to communicate with the intelligence engine.");
+    } catch (e: any) {
+      if (e.name !== 'AbortError') {
+        console.error("Chat error:", e);
+        finalText += "\n\n**Error:** Failed to communicate with the intelligence engine.";
+        setText(finalText);
+      }
+    } finally {
       setLoading(false);
     }
+    return { text: finalText, sources: finalSources };
   }, []);
 
   return { text, sources, loading, query };

@@ -72,4 +72,15 @@ def delete_document(doc_id: str, db: Session = Depends(get_db)):
     db.delete(doc)
     db.commit()
     
+    # Remove from Neo4j (Knowledge Graph)
+    try:
+        from graph.neo4j_client import neo4j_client
+        if neo4j_client.test_connection():
+            # Delete relationships created by this doc
+            neo4j_client.run_query("MATCH ()-[r]-() WHERE r.doc_id = $doc_id DELETE r", {"doc_id": doc_id})
+            # Delete nodes created by this doc
+            neo4j_client.run_query("MATCH (n) WHERE n.doc_id = $doc_id DETACH DELETE n", {"doc_id": doc_id})
+    except Exception as e:
+        print(f"Failed to delete graph data for {doc_id}: {e}")
+        
     return {"deleted": True}

@@ -1,6 +1,9 @@
 import type { ChatMessage } from '../../types/chat';
 import { StreamingText } from './StreamingText';
 import { FileText, User, Terminal } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -33,7 +36,13 @@ export function MessageList({ messages, loading, streamingText, streamingSources
               : 'bg-white/5 backdrop-blur-md text-text rounded-tl-sm border border-white/10'
           }`}>
             <div className="prose prose-invert max-w-none text-sm">
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                  {msg.content}
+                </ReactMarkdown>
+              ) : (
+                msg.content
+              )}
             </div>
             
             {msg.sources && msg.sources.length > 0 && (
@@ -57,7 +66,7 @@ export function MessageList({ messages, loading, streamingText, streamingSources
       ))}
       
       {/* Streaming Assistant Message */}
-      {(loading || streamingText) && (
+      {loading && (
         <div className="flex gap-4 justify-start">
           <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary shrink-0">
             <Terminal size={16} />

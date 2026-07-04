@@ -51,7 +51,7 @@ class ComplianceReport(Base):
 def init_db():
     """Create all SQLite tables."""
     Base.metadata.create_all(bind=engine)
-    print("✅ SQLite tables created")
+    print("SQLite tables created")
 
 def get_db():
     """Dependency to get a SQLite session."""
