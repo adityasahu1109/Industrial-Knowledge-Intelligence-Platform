@@ -85,7 +85,7 @@ export function DocumentManager() {
 
       <UploadDropzone onUploadSuccess={loadDocuments} />
 
-      <div className="bg-surface-alt border border-border rounded-xl overflow-hidden flex-1 flex flex-col">
+      <div className="bg-surface-alt border border-border rounded-xl overflow-hidden flex-1 flex flex-col min-h-[400px]">
         <div className="grid grid-cols-12 gap-4 p-4 border-b border-border text-[11px] uppercase tracking-wider text-text-dim bg-surface-alt">
           <div className="col-span-5 font-semibold">Filename</div>
           <div className="col-span-3 font-semibold">Status</div>

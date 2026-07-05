@@ -1,4 +1,6 @@
 from retrieval.vector_store import semantic_search
+from retrieval.bm25_index import search as keyword_search
+from retrieval.rrf_fusion import rrf_fusion
 from core.ollama_client import chat_stream
 from typing import Generator
 
@@ -9,8 +11,11 @@ If the context doesn't contain enough information, say so clearly but politely.
 Never invent facts not present in the context."""
 
 def query_stream(user_query: str) -> Generator[dict, None, None]:
-    # 1. Phase 1: Simple semantic search
-    chunks = semantic_search(user_query, n=8)
+    # 1. Phase 1: Hybrid Search (Semantic + Keyword)
+    semantic_chunks = semantic_search(user_query, n=8)
+    keyword_chunks = keyword_search(user_query, n=8)
+    
+    chunks = rrf_fusion(semantic_chunks, keyword_chunks, n=8)
     
     # 2. Build context string with source labels
     context_parts = []

@@ -23,36 +23,44 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
     e.stopPropagation();
     setIsDragging(false);
     
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      await handleUpload(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleUploadAll(Array.from(e.dataTransfer.files));
     }
   };
 
-  const handleUpload = async (file: File) => {
-    // Only PDF for Phase 1
-    if (file.type !== "application/pdf") {
+  const handleUploadAll = async (files: File[]) => {
+    const pdfFiles = files.filter(f => f.type === "application/pdf");
+    
+    if (pdfFiles.length === 0) {
       setError("Only PDF files are supported currently.");
       return;
     }
+    if (pdfFiles.length !== files.length) {
+      setError("Some files were skipped (only PDFs are supported).");
+    } else {
+      setError(null);
+    }
     
-    setError(null);
     setUploading(true);
     
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("doc_type", "manual"); // Default for now
-    
-    try {
-      await fetchJson("/documents/upload", {
-        method: "POST",
-        body: formData,
-      });
-      onUploadSuccess();
-    } catch (err: any) {
-      setError(err.message || "Failed to upload document");
-    } finally {
-      setUploading(false);
+    // Upload sequentially to avoid overloading the backend/UI
+    for (const file of pdfFiles) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("doc_type", "manual");
+      
+      try {
+        await fetchJson("/documents/upload", {
+          method: "POST",
+          body: formData,
+        });
+      } catch (err: any) {
+        console.error("Failed to upload", file.name, err);
+      }
     }
+    
+    setUploading(false);
+    onUploadSuccess();
   };
 
   return (
@@ -71,9 +79,10 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
       <input 
         type="file" 
         ref={fileInputRef}
-        onChange={(e) => e.target.files && handleUpload(e.target.files[0])} 
+        onChange={(e) => e.target.files && handleUploadAll(Array.from(e.target.files))} 
         className="hidden" 
         accept="application/pdf"
+        multiple
       />
       
       <div className="flex justify-center mb-4 text-text-dim">

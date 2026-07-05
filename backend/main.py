@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from core.database import init_db
 from core.ollama_client import verify_models
-from routers import documents, chat, graph
+from routers import documents, chat, graph, maintenance
 import os
 
 @asynccontextmanager
@@ -29,3 +29,4 @@ app.add_middleware(
 app.include_router(documents.router)
 app.include_router(chat.router)
 app.include_router(graph.router)
+app.include_router(maintenance.router)
