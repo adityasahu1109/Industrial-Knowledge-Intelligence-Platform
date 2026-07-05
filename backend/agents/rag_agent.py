@@ -2,10 +2,10 @@ from retrieval.vector_store import semantic_search
 from core.ollama_client import chat_stream
 from typing import Generator
 
-RAG_SYSTEM = """You are an expert industrial knowledge assistant.
-Answer questions using ONLY the provided document excerpts.
-Always cite your sources using [Document: filename, Page: N] format.
-If the context doesn't contain enough information, say so clearly.
+RAG_SYSTEM = """You are a helpful, conversational expert industrial knowledge assistant.
+Answer questions naturally, but base your answers ONLY on the provided document excerpts.
+When you use information from a source, cite it inline using markdown links with the source number like this: [[1]](#source-1). 
+If the context doesn't contain enough information, say so clearly but politely.
 Never invent facts not present in the context."""
 
 def query_stream(user_query: str) -> Generator[dict, None, None]:
@@ -18,8 +18,8 @@ def query_stream(user_query: str) -> Generator[dict, None, None]:
     
     for i, chunk in enumerate(chunks):
         meta = chunk["metadata"]
-        label = f"[Source {i+1}: {meta.get('filename', 'Unknown')}, Page {meta.get('page', 'Unknown')}]"
-        context_parts.append(f"{label}\n{chunk['document']}")
+        label = f"Source {i+1}: {meta.get('filename', 'Unknown')}, Page {meta.get('page', 'Unknown')}"
+        context_parts.append(f"[{label}]\n{chunk['document']}")
         sources.append({
             "label": f"Source {i+1}",
             "filename": meta.get("filename", "Unknown"),

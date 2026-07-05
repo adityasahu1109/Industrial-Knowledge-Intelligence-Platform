@@ -1,15 +1,23 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
+import { CitationLink } from './CitationLink';
 
 interface StreamingTextProps {
   text: string;
   loading: boolean;
+  sources?: any[];
 }
 
-export function StreamingText({ text, loading }: StreamingTextProps) {
+export function StreamingText({ text, loading, sources = [] }: StreamingTextProps) {
   return (
     <div className="prose prose-invert max-w-none text-sm">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+      <ReactMarkdown 
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        components={{
+          a: (props) => <CitationLink {...props} sources={sources} />
+        }}
+      >
         {text}
       </ReactMarkdown>
       {loading && (

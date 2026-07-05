@@ -4,6 +4,8 @@ import { FileText, Terminal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
+import { SourcesList } from './SourcesList';
+import { CitationLink } from './CitationLink';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -39,7 +41,12 @@ export function MessageList({ messages, loading, streamingText, streamingSources
             }`}>
               <div className="prose prose-invert max-w-none text-sm">
                 {msg.role === 'assistant' ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
+                    components={{
+                      a: (props) => <CitationLink {...props} sources={msg.sources} />
+                    }}
+                  >
                     {msg.content}
                   </ReactMarkdown>
                 ) : (
@@ -47,16 +54,7 @@ export function MessageList({ messages, loading, streamingText, streamingSources
                 )}
               </div>
               
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-border flex flex-wrap gap-2">
-                  {msg.sources.map((src, i) => (
-                    <button key={i} className="inline-flex items-center gap-1 text-[11px] font-mono bg-surface-raised border border-border px-2 py-0.5 rounded text-data hover:border-data/50 transition-colors">
-                      <FileText size={12} />
-                      <span>{src.filename} (p. {src.page})</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <SourcesList sources={msg.sources || []} />
             </div>
             
             <div className={`text-[10px] text-text-dim ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
@@ -74,18 +72,9 @@ export function MessageList({ messages, loading, streamingText, streamingSources
           </div>
           <div className="flex flex-col gap-1 max-w-[80%]">
             <div className="p-4 bg-surface-alt border border-border rounded-2xl rounded-tl-sm text-text">
-              <StreamingText text={streamingText} loading={loading} />
+              <StreamingText text={streamingText} loading={loading} sources={streamingSources || []} />
               
-              {streamingSources && streamingSources.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-border flex flex-wrap gap-2">
-                  {streamingSources.map((src, i) => (
-                    <button key={i} className="inline-flex items-center gap-1 text-[11px] font-mono bg-surface-raised border border-border px-2 py-0.5 rounded text-data hover:border-data/50 transition-colors">
-                      <FileText size={12} />
-                      <span>{src.filename} (p. {src.page})</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <SourcesList sources={streamingSources || []} />
             </div>
             <div className="text-[10px] text-text-dim text-left">generating...</div>
           </div>
