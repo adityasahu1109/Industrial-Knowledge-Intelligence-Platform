@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { UploadDropzone } from './UploadDropzone';
 import { fetchJson } from '../../api/client';
 import type { DocumentItem } from '../../types/document';
-import { FileText, Trash2, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { FileText, Trash2, CheckCircle, AlertCircle, Loader2, RefreshCw, Check } from 'lucide-react';
 
 export function DocumentManager() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
 
   const loadDocuments = async () => {
     try {
@@ -39,9 +40,52 @@ export function DocumentManager() {
     
     try {
       await fetchJson(`/documents/${docId}`, { method: 'DELETE' });
+      setSelectedDocs(prev => {
+        const next = new Set(prev);
+        next.delete(docId);
+        return next;
+      });
       loadDocuments();
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (!confirm(`Are you sure you want to delete ${selectedDocs.size} documents?`)) return;
+    
+    setLoading(true);
+    try {
+      // Delete sequentially to avoid overwhelming the server
+      for (const docId of selectedDocs) {
+        await fetchJson(`/documents/${docId}`, { method: 'DELETE' }).catch(console.error);
+      }
+      setSelectedDocs(new Set());
+      loadDocuments();
+    } catch (e) {
+      console.error(e);
+      setLoading(false);
+    }
+  };
+
+  const toggleSelection = (docId: string) => {
+    setSelectedDocs(prev => {
+      const next = new Set(prev);
+      if (next.has(docId)) {
+        next.delete(docId);
+      } else {
+        next.add(docId);
+      }
+      return next;
+    });
+  };
+
+  const allSelected = documents.length > 0 && selectedDocs.size === documents.length;
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedDocs(new Set());
+    } else {
+      setSelectedDocs(new Set(documents.map(d => d.doc_id)));
     }
   };
 
@@ -85,12 +129,33 @@ export function DocumentManager() {
 
       <UploadDropzone onUploadSuccess={loadDocuments} />
 
-      <div className="bg-surface-alt border border-border rounded-xl overflow-hidden flex-1 flex flex-col min-h-[400px]">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-border text-[11px] uppercase tracking-wider text-text-dim bg-surface-alt">
-          <div className="col-span-5 font-semibold">Filename</div>
-          <div className="col-span-3 font-semibold">Status</div>
-          <div className="col-span-2 text-right font-semibold">Chunks</div>
-          <div className="col-span-2 text-center font-semibold">Actions</div>
+      <div className="bg-surface-alt border border-border rounded-xl overflow-hidden flex-1 flex flex-col min-h-[400px] relative">
+        <div className="grid grid-cols-12 gap-4 p-4 border-b border-border text-[11px] uppercase tracking-wider text-text-dim bg-surface-alt sticky top-0 z-10 shadow-sm">
+          <div className="col-span-5 font-semibold flex items-center gap-3">
+            <button 
+              onClick={toggleAll}
+              className={`flex items-center justify-center w-4 h-4 rounded border transition-colors ${
+                allSelected 
+                  ? 'bg-primary border-primary text-white' 
+                  : 'bg-surface border-border hover:border-primary/50 text-transparent'
+              }`}
+            >
+              <Check size={12} strokeWidth={3} />
+            </button>
+            {selectedDocs.size > 0 ? (
+              <button 
+                onClick={handleDeleteSelected} 
+                className="flex items-center gap-1.5 text-critical hover:text-white bg-critical/10 hover:bg-critical px-2 py-1 rounded transition-colors text-[10px]"
+              >
+                <Trash2 size={12} /> DELETE SELECTED ({selectedDocs.size})
+              </button>
+            ) : (
+              <span>Filename</span>
+            )}
+          </div>
+          <div className="col-span-3 font-semibold flex items-center">Status</div>
+          <div className="col-span-2 text-right font-semibold flex items-center justify-end">Chunks</div>
+          <div className="col-span-2 text-center font-semibold flex items-center justify-center">Actions</div>
         </div>
         
         <div className="flex-1 overflow-y-auto">
@@ -103,8 +168,18 @@ export function DocumentManager() {
             <div className="p-12 text-center text-text-muted">No documents uploaded yet.</div>
           ) : (
             documents.map(doc => (
-              <div key={doc.doc_id} className="grid grid-cols-12 gap-4 p-4 border-b border-border/50 items-center hover:bg-surface-hover transition-colors">
+              <div key={doc.doc_id} className={`grid grid-cols-12 gap-4 p-4 border-b border-border/50 items-center hover:bg-surface-hover transition-colors ${selectedDocs.has(doc.doc_id) ? 'bg-primary/5' : ''}`}>
                 <div className="col-span-5 flex items-center gap-3 truncate">
+                  <button 
+                    onClick={() => toggleSelection(doc.doc_id)}
+                    className={`flex-shrink-0 flex items-center justify-center w-4 h-4 rounded border transition-colors ${
+                      selectedDocs.has(doc.doc_id)
+                        ? 'bg-primary border-primary text-white' 
+                        : 'bg-surface border-border hover:border-primary/50 text-transparent'
+                    }`}
+                  >
+                    <Check size={12} strokeWidth={3} />
+                  </button>
                   <FileText size={18} className="text-primary shrink-0 opacity-80" />
                   <span className="truncate text-sm font-medium" title={doc.filename}>{doc.filename}</span>
                 </div>
