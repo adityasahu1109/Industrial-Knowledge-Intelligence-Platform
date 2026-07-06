@@ -5,7 +5,7 @@ from typing import Generator
 import sys
 
 CHAT_MODEL = "llama3.1:8b"
-VISION_MODEL = "minicpm-v"
+VISION_MODEL = "qwen2.5vl:7b"
 EMBED_MODEL = "nomic-embed-text"
 
 def verify_models():

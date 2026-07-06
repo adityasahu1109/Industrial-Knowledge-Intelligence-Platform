@@ -36,3 +36,5 @@ app.include_router(graph.router)
 app.include_router(maintenance.router)
 app.include_router(drawings.router)
 app.include_router(compliance.router)
+
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

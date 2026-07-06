@@ -54,6 +54,10 @@ class Drawing(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     filename = Column(String, nullable=False)
+    drawing_number = Column(String, nullable=True)
+    revision = Column(String, nullable=True)
+    unit_area = Column(String, nullable=True)
+    overall_analysis = Column(String, nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
 class DrawingTag(Base):

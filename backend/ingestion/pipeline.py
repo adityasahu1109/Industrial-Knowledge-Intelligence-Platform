@@ -1,11 +1,117 @@
 import traceback
 from datetime import datetime
+import base64
 from core.database import SessionLocal, Document
 from ingestion.parsers.pdf_parser import parse_pdf, is_scanned
 from ingestion.chunker import chunk_document
 from ingestion.embedder import embed_chunks
 from retrieval.vector_store import add_chunks
 from graph.graph_builder import store_entities_in_graph
+from drawing.analyzer import extract_drawing_data
+from graph.neo4j_client import neo4j_client
+from core.database import Drawing, DrawingTag
+
+def process_drawing(file_path: str, doc_id: str, doc_type: str, filename: str, db):
+    """Processes a drawing, extracts tags, writes to Neo4j and ChromaDB."""
+    with open(file_path, "rb") as f:
+        base64_image = base64.b64encode(f.read()).decode('utf-8')
+    
+    # 1. Analyze image to get tags, title block, connections
+    results = extract_drawing_data(base64_image)
+    
+    title_block = results.get("title_block", {})
+    components = results.get("components", [])
+    connections = results.get("connections", [])
+    overall_analysis = results.get("overall_analysis", "")
+    
+    # 2. Save Drawing to SQLite
+    db_drawing = Drawing(
+        id=doc_id, 
+        filename=filename,
+        drawing_number=title_block.get('drawing_number', ''),
+        revision=title_block.get('revision', ''),
+        unit_area=title_block.get('unit_area', ''),
+        overall_analysis=overall_analysis
+    )
+    db.add(db_drawing)
+    components = results.get("components", [])
+    connections = results.get("connections", [])
+    
+    # 3. Embed Drawing Summary to ChromaDB
+    summary_parts = [f"Drawing {filename}"]
+    if title_block.get('drawing_number'):
+        summary_parts.append(f"Number: {title_block['drawing_number']}")
+    if title_block.get('revision'):
+        summary_parts.append(f"Rev: {title_block['revision']}")
+    if title_block.get('title'):
+        summary_parts.append(f"Title: {title_block['title']}")
+    
+    summary_str = ", ".join(summary_parts) + ". "
+    if components:
+        tags = [c['tag'] for c in components]
+        summary_str += f"Shows components: {', '.join(tags)}."
+        
+    overall_analysis = results.get("overall_analysis", "")
+    if overall_analysis:
+        summary_str += f"\n\nAnalysis: {overall_analysis}"
+        
+    doc_metadata = {
+        "doc_id": doc_id,
+        "filename": filename,
+        "doc_type": doc_type,
+        "date_ingested": datetime.utcnow().isoformat()
+    }
+    
+    # Chunking just the summary
+    chunks = [{
+        "id": f"{doc_id}_chunk_0",
+        "text": summary_str, 
+        "metadata": {**doc_metadata, "chunk_index": 0}
+    }]
+    embeddings = embed_chunks(chunks)
+    add_chunks(chunks, embeddings)
+    
+    # 4. Neo4j Integration
+    driver = neo4j_client.driver
+    if driver:
+        with driver.session() as session:
+            # Create Drawing Node
+            session.run("""
+                MERGE (d:Drawing {id: $id})
+                SET d.filename = $filename,
+                    d.drawing_number = $drawing_number,
+                    d.revision = $revision,
+                    d.unit_area = $unit_area,
+                    d.overall_analysis = $overall_analysis
+            """, id=doc_id, filename=filename, 
+                 drawing_number=title_block.get('drawing_number', ''),
+                 revision=title_block.get('revision', ''),
+                 unit_area=title_block.get('unit_area', ''),
+                 overall_analysis=overall_analysis)
+            
+            # Create Equipment Nodes & Relations
+            for comp in components:
+                tag = comp["tag"]
+                # Save Tag to SQLite
+                db_tag = DrawingTag(drawing_id=doc_id, tag=tag, type=comp.get("type"))
+                db.add(db_tag)
+                
+                session.run("""
+                    MERGE (e:Equipment {tag: $tag})
+                    MERGE (d:Drawing {id: $id})
+                    MERGE (d)-[:SHOWS]->(e)
+                """, tag=tag, id=doc_id)
+                
+            # Create Topology Edges (ONLY for P&ID / PFD)
+            if doc_type.lower() in ["p&id", "pfd", "pid"]:
+                for conn in connections:
+                    session.run("""
+                        MERGE (e1:Equipment {tag: $from_tag})
+                        MERGE (e2:Equipment {tag: $to_tag})
+                        MERGE (e1)-[:CONNECTED_TO {type: $c_type}]->(e2)
+                    """, from_tag=conn["from"], to_tag=conn["to"], c_type=conn["type"])
+    
+    return len(chunks)
 
 def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
     """
@@ -23,10 +129,23 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         doc.status = 'processing'
         db.commit()
         
-        # 2. Format detection & parsing
         ext = file_path.lower().split('.')[-1]
-        pages = []
         
+        # Branch 1: Drawing Analysis
+        if ext in ['png', 'jpg', 'jpeg'] or doc_type.lower() in ["p&id", "pfd", "pid"]:
+            if doc_type.lower() in ["unsupported", "other"]:
+                raise ValueError("Unsupported drawing type.")
+                
+            chunk_count = process_drawing(file_path, doc_id, doc_type, filename, db)
+            doc.chunk_count = chunk_count
+            doc.status = 'complete'
+            doc.completed_at = datetime.utcnow()
+            db.commit()
+            print(f"Drawing Ingestion complete for {filename} -- graph ready")
+            return
+            
+        # Branch 2: Standard Text Parsing
+        pages = []
         if ext == 'pdf':
             if is_scanned(file_path):
                 from ingestion.parsers.ocr_parser import parse_ocr_pdf
@@ -62,7 +181,7 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         # 5. Store in ChromaDB
         add_chunks(chunks, embeddings)
         
-        # 6. Mark complete IMMEDIATELY -- user can now chat
+        # 6. Mark complete IMMEDIATELY
         doc.status = 'complete'
         doc.completed_at = datetime.utcnow()
         db.commit()
@@ -71,7 +190,6 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         # 7. Entity extraction (non-blocking background stage)
         try:
             print(f"[Stage 2] Extracting entities for {len(chunks)} chunks...")
-            # Batch chunks to reduce LLM calls
             batch_size = 3
             for i in range(0, len(chunks), batch_size):
                 batch = chunks[i:i+batch_size]
@@ -80,11 +198,9 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
                     store_entities_in_graph(doc_id, combined_text)
                 except Exception as e:
                     print(f"Warning: Entity extraction failed for batch {i}: {e}")
-                print(f"[Stage 2] Entities extracted for {min(i+batch_size, len(chunks))}/{len(chunks)} chunks...")
             print(f"[Stage 2] Graph population complete for {filename}")
         except Exception as e:
             print(f"[Stage 2] Entity extraction failed for {filename}: {e}")
-            # Document remains 'complete' -- chat still works
         
     except Exception as e:
         print(f"Ingestion failed for {filename}: {e}")
