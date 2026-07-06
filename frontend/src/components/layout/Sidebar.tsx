@@ -67,10 +67,36 @@ export function Sidebar() {
           Analysis
         </div>
         <nav className="flex flex-col gap-0.5">
+          <NavLink
+            to="/drawings"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+                isActive 
+                  ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium' 
+                  : 'border-l-2 border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
+              }`
+            }
+          >
+            <PenTool size={18} />
+            Drawing Analysis
+          </NavLink>
+          
+          <NavLink
+            to="/compliance"
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+                isActive 
+                  ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium' 
+                  : 'border-l-2 border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
+              }`
+            }
+          >
+            <ShieldAlert size={18} />
+            Compliance
+          </NavLink>
+          
           {[
-            { icon: <PenTool size={18} />, label: 'Drawing Analysis' },
             { icon: <Activity size={18} />, label: 'Maintenance' },
-            { icon: <ShieldAlert size={18} />, label: 'Compliance' },
           ].map((item, i) => (
             <div key={i} className="flex items-center justify-between px-5 py-2.5 text-sm opacity-40 cursor-not-allowed border-l-2 border-transparent">
               <div className="flex items-center gap-3 text-text-muted">

@@ -44,9 +44,26 @@ class ComplianceReport(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     regulation_id = Column(String, nullable=True)
-    status = Column(String, nullable=True) # 'compliant', 'gap_critical', 'gap_major', 'gap_minor'
-    evidence = Column(String, nullable=True) # JSON list of supporting doc_ids
+    doc_type_filter = Column(String, nullable=True)
+    overall_score = Column(Integer, nullable=True)
+    report_data = Column(String, nullable=True) # Full JSON report
     generated_at = Column(DateTime, default=datetime.utcnow)
+
+class Drawing(Base):
+    __tablename__ = "drawings"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    filename = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+class DrawingTag(Base):
+    __tablename__ = "drawing_tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    drawing_id = Column(String, nullable=False)
+    tag = Column(String, nullable=False)
+    type = Column(String, nullable=True)
+    description = Column(String, nullable=True)
 
 def init_db():
     """Create all SQLite tables."""

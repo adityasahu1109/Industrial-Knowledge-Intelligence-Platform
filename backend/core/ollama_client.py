@@ -48,16 +48,17 @@ def chat_stream(system: str, user: str) -> Generator[str, None, None]:
     for chunk in stream:
         yield chunk['message']['content']
 
-def chat_json(system: str, user: str) -> dict:
-    """Call llama3.1:8b and parse JSON response."""
+def chat_json(system: str, user: str, schema: dict = None) -> dict:
+    """Send a chat message enforcing JSON output."""
     resp = ollama.chat(
         model=CHAT_MODEL,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user}
         ],
+        format=schema if schema else "json",
         keep_alive=-1,
-        options={"temperature": 0.1}
+        options={"temperature": 0.0}
     )
     raw = resp['message']['content']
     # Strip markdown fences
@@ -72,3 +73,19 @@ def embed(text: str) -> list[float]:
     """Generate embedding via nomic-embed-text."""
     resp = ollama.embeddings(model=EMBED_MODEL, prompt=text, keep_alive=-1)
     return resp["embedding"]
+
+def vision_analyze(prompt: str, base64_image: str) -> str:
+    """Analyze an image using minicpm-v."""
+    resp = ollama.chat(
+        model=VISION_MODEL,
+        messages=[
+            {
+                "role": "user", 
+                "content": prompt,
+                "images": [base64_image]
+            }
+        ],
+        keep_alive=-1,
+        options={"temperature": 0.0}
+    )
+    return resp['message']['content']

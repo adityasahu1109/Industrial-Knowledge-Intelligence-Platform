@@ -4,6 +4,8 @@ import { Sidebar } from './components/layout/Sidebar'
 import { ChatPage } from './components/chat/ChatPage'
 import { DocumentManager } from './components/documents/DocumentManager'
 import { GraphExplorer } from './components/graph/GraphExplorer'
+import { DrawingViewer } from './components/drawings/DrawingViewer'
+import { ComplianceDashboard } from './components/compliance/ComplianceDashboard'
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/documents" element={<DocumentManager />} />
               <Route path="/graph" element={<GraphExplorer />} />
+              <Route path="/drawings" element={<DrawingViewer />} />
+              <Route path="/compliance" element={<ComplianceDashboard />} />
               {/* Other routes will go here in later phases */}
             </Routes>
           </main>

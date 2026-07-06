@@ -28,8 +28,17 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         pages = []
         
         if ext == 'pdf':
-            # Phase 1: assume digital PDF
-            pages = parse_pdf(file_path)
+            if is_scanned(file_path):
+                from ingestion.parsers.ocr_parser import parse_ocr_pdf
+                pages = parse_ocr_pdf(file_path)
+            else:
+                pages = parse_pdf(file_path)
+        elif ext == 'xlsx':
+            from ingestion.parsers.excel_parser import parse_excel
+            pages = parse_excel(file_path)
+        elif ext == 'docx':
+            from ingestion.parsers.docx_parser import parse_docx
+            pages = parse_docx(file_path)
         else:
             raise ValueError(f"Unsupported file format: {ext}")
             

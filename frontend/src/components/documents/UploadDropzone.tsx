@@ -29,14 +29,20 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   };
 
   const handleUploadAll = async (files: File[]) => {
-    const pdfFiles = files.filter(f => f.type === "application/pdf");
+    const allowedTypes = [
+      "application/pdf", 
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ];
     
-    if (pdfFiles.length === 0) {
-      setError("Only PDF files are supported currently.");
+    const validFiles = files.filter(f => allowedTypes.includes(f.type) || f.name.endsWith('.pdf') || f.name.endsWith('.docx') || f.name.endsWith('.xlsx'));
+    
+    if (validFiles.length === 0) {
+      setError("Only PDF, DOCX, and XLSX files are supported.");
       return;
     }
-    if (pdfFiles.length !== files.length) {
-      setError("Some files were skipped (only PDFs are supported).");
+    if (validFiles.length !== files.length) {
+      setError("Some files were skipped (unsupported format).");
     } else {
       setError(null);
     }
@@ -44,7 +50,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
     setUploading(true);
     
     // Upload sequentially to avoid overloading the backend/UI
-    for (const file of pdfFiles) {
+    for (const file of validFiles) {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("doc_type", "manual");
@@ -81,7 +87,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
         ref={fileInputRef}
         onChange={(e) => e.target.files && handleUploadAll(Array.from(e.target.files))} 
         className="hidden" 
-        accept="application/pdf"
+        accept=".pdf,.docx,.xlsx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         multiple
       />
       
@@ -99,7 +105,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
         {uploading ? 'Uploading and processing...' : 'Drag & drop industrial documents'}
       </h3>
       <p className="text-xs text-text-dim mb-4">
-        {error ? <span className="text-critical">{error}</span> : 'PDF files up to 50MB'}
+        {error ? <span className="text-critical">{error}</span> : 'PDF, DOCX, XLSX files up to 50MB'}
       </p>
       
       <button 
