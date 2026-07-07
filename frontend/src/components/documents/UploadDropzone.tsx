@@ -6,7 +6,6 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [docType, setDocType] = useState<string>("manual");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: React.DragEvent) => {
@@ -56,7 +55,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
     for (const file of validFiles) {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("doc_type", docType);
+      formData.append("doc_type", "auto");
       
       try {
         await fetchJson("/documents/upload", {
@@ -77,20 +76,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 text-sm text-text-muted bg-surface-alt px-3 py-1.5 rounded-lg border border-border">
           <FileType size={16} />
-          <span>Upload as:</span>
-          <select 
-            value={docType}
-            onChange={(e) => setDocType(e.target.value)}
-            className="bg-transparent border-none text-text focus:outline-none focus:ring-0 text-sm font-medium ml-1 cursor-pointer"
-            disabled={uploading}
-          >
-            <option value="manual">Manual / Standard Text</option>
-            <option value="sop">SOP (Standard Operating Procedure)</option>
-            <option value="inspection_report">Inspection Report</option>
-            <option value="p&id">Drawing - P&ID</option>
-            <option value="pfd">Drawing - PFD</option>
-            <option value="unsupported">Drawing - Other (Unsupported)</option>
-          </select>
+          <span>Auto-classification Active</span>
         </div>
       </div>
       

@@ -1,42 +1,60 @@
-import { useState, useEffect } from 'react';
-import { Target, CheckCircle2, Play, ChevronDown, ImageIcon, Loader2 } from 'lucide-react';
-import { fetchJson } from '../../api/client';
+import React, { useState, useEffect } from 'react';
+import { Target, Search, ChevronDown, CheckCircle2, Play, Image as ImageIcon, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
-export function DrawingViewer() {
+interface DrawingViewerProps {
+  initialDrawingId?: string;
+}
+
+export function DrawingViewer({ initialDrawingId }: DrawingViewerProps) {
   const [drawings, setDrawings] = useState<any[]>([]);
-  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(null);
-  const [drawingData, setDrawingData] = useState<any | null>(null);
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(initialDrawingId || null);
+  const [drawingData, setDrawingData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDrawings();
+    // Fetch list of drawings
+    fetch('http://localhost:8000/api/documents')
+      .then(res => res.json())
+      .then(data => {
+        const d = data.filter((doc: any) => 
+          doc.status === 'complete' && 
+          ['p&id', 'pfd', 'pid'].includes(doc.doc_type?.toLowerCase())
+        );
+        setDrawings(d);
+        if (!selectedDrawingId && d.length > 0) {
+          // Do not auto-select if we just want them to choose, or auto-select first
+        }
+      })
+      .catch(err => console.error("Failed to load drawings list", err));
   }, []);
 
-  const loadDrawings = async () => {
-    try {
-      const data = await fetchJson('/drawings');
-      setDrawings(data);
-      if (data.length > 0 && !selectedDrawingId) {
-        handleSelectDrawing(data[0].id);
-      }
-    } catch (e) {
-      console.error("Failed to load drawings", e);
+  useEffect(() => {
+    if (selectedDrawingId) {
+      loadDrawingData(selectedDrawingId);
     }
-  };
+  }, [selectedDrawingId]);
 
-  const handleSelectDrawing = async (id: string) => {
-    setSelectedDrawingId(id);
+  const loadDrawingData = async (id: string) => {
     setLoading(true);
     setError(null);
     try {
-      const data = await fetchJson(`/drawings/${id}`);
+      const res = await fetch(`http://localhost:8000/api/drawings/${id}`);
+      if (!res.ok) throw new Error("Failed to load drawing data");
+      const data = await res.json();
       setDrawingData(data);
-    } catch (e: any) {
-      setError(e.message || "Failed to load drawing data");
-      setDrawingData(null);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSelectDrawing = (id: string) => {
+    setSelectedDrawingId(id);
+    if (id !== selectedDrawingId) {
+      setDrawingData(null);
     }
   };
 
@@ -60,7 +78,7 @@ export function DrawingViewer() {
           >
             <option value="" disabled>Select a drawing...</option>
             {drawings.map(d => (
-              <option key={d.id} value={d.id}>{d.filename}</option>
+              <option key={d.id} value={d.doc_id}>{d.filename}</option>
             ))}
           </select>
           <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none" size={16} />
@@ -77,13 +95,15 @@ export function DrawingViewer() {
           </div>
           <div className="flex-1 overflow-auto p-4 flex flex-col gap-4 bg-surface-raised/30">
              {drawingData?.overall_analysis && (
-               <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-2 shadow-sm">
-                 <h4 className="text-sm font-semibold text-primary mb-2 flex items-center gap-2">
-                   <Target size={14} /> AI System Analysis
+               <div className="bg-primary/5 border border-primary/20 rounded-lg p-6 mb-2 shadow-sm">
+                 <h4 className="text-base font-bold text-primary mb-4 flex items-center gap-2 border-b border-primary/10 pb-2">
+                   <Target size={16} /> AI System Analysis
                  </h4>
-                 <p className="text-sm text-text leading-relaxed whitespace-pre-wrap">
-                   {drawingData.overall_analysis}
-                 </p>
+                 <div className="prose prose-sm dark:prose-invert max-w-none text-text">
+                   <ReactMarkdown>
+                     {drawingData.overall_analysis}
+                   </ReactMarkdown>
+                 </div>
                </div>
              )}
              

@@ -13,8 +13,22 @@ from core.database import Drawing, DrawingTag
 
 def process_drawing(file_path: str, doc_id: str, doc_type: str, filename: str, db):
     """Processes a drawing, extracts tags, writes to Neo4j and ChromaDB."""
-    with open(file_path, "rb") as f:
-        base64_image = base64.b64encode(f.read()).decode('utf-8')
+    ext = file_path.lower().split('.')[-1]
+    
+    if ext == 'pdf':
+        import fitz
+        doc = fitz.open(file_path)
+        page = doc[0]
+        # Use high resolution DPI for analysis
+        pix = page.get_pixmap(dpi=150)
+        # Create a new PNG file path in the same directory
+        png_path = file_path.replace('.pdf', '.png')
+        pix.save(png_path)
+        with open(png_path, "rb") as f:
+            base64_image = base64.b64encode(f.read()).decode('utf-8')
+    else:
+        with open(file_path, "rb") as f:
+            base64_image = base64.b64encode(f.read()).decode('utf-8')
     
     # 1. Analyze image to get tags, title block, connections
     results = extract_drawing_data(base64_image)
@@ -131,8 +145,21 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         
         ext = file_path.lower().split('.')[-1]
         
+        # Determine the doc_type automatically
+        print(f"Auto-classifying document: {filename}...")
+        from ingestion.classifier import classify_document
+        predicted_doc_type = classify_document(file_path, filename)
+        
+        print(f"Classification result for {filename}: {predicted_doc_type}")
+        
+        # Update the DB record with the discovered doc_type
+        doc.doc_type = predicted_doc_type
+        db.commit()
+        
+        doc_type = predicted_doc_type
+        
         # Branch 1: Drawing Analysis
-        if ext in ['png', 'jpg', 'jpeg'] or doc_type.lower() in ["p&id", "pfd", "pid"]:
+        if ext in ['png', 'jpg', 'jpeg'] or doc_type in ["p&id", "pfd", "pid"]:
             if doc_type.lower() in ["unsupported", "other"]:
                 raise ValueError("Unsupported drawing type.")
                 

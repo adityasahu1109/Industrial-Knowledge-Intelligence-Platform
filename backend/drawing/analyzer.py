@@ -120,9 +120,18 @@ def extract_drawing_data(base64_image: str) -> dict:
     analysis_prompt = """
     Analyze this Piping and Instrumentation Diagram (P&ID) or industrial schematic.
     Provide a detailed, high-level summary of the entire system shown in the drawing.
-    Describe the main process flow, key equipment involved (e.g. pumps feeding into reactors),
-    and the general purpose of this system. Keep the description technical, concise, and professional.
-    Return ONLY your analysis text, without any conversational filler or JSON formatting.
+    Format your response in polished Markdown. Use the following structure:
+    
+    ### System Overview
+    (A brief paragraph describing the general purpose of this system)
+    
+    ### Key Process Flow
+    (Bulleted list describing how the fluid/material moves through the system)
+    
+    ### Major Equipment
+    (Bulleted list of the primary components like pumps, vessels, or heat exchangers, bolding their tags)
+    
+    Keep the description highly technical, concise, and professional. Return ONLY the markdown text.
     """
     
     overall_analysis = vision_analyze(analysis_prompt, base64_image)

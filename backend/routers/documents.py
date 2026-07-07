@@ -12,7 +12,7 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    doc_type: str = Form("manual"),
+    doc_type: str = Form("auto"),
     db: Session = Depends(get_db)
 ):
     doc_id = str(uuid.uuid4())
@@ -44,7 +44,7 @@ async def upload_document(
 @router.get("")
 def list_documents(db: Session = Depends(get_db)):
     docs = db.query(Document).order_by(Document.uploaded_at.desc()).all()
-    return [{"doc_id": d.id, "filename": d.filename, "status": d.status, "chunk_count": d.chunk_count, "entity_count": d.entity_count} for d in docs]
+    return [{"doc_id": d.id, "filename": d.filename, "doc_type": d.doc_type, "status": d.status, "chunk_count": d.chunk_count, "entity_count": d.entity_count} for d in docs]
 
 @router.get("/{doc_id}/status")
 def get_document_status(doc_id: str, db: Session = Depends(get_db)):
