@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
-import { ShieldAlert, CheckCircle, AlertTriangle, Loader2, Play, FileText, Download } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Loader2, FileText, ChevronDown, ChevronRight, CheckCircle2, XCircle, AlertCircle, Download, Play } from 'lucide-react';
 import { fetchJson } from '../../api/client';
 
 export function ComplianceDashboard() {
-  const [standard, setStandard] = useState("OSHA 1910.119 - Process Safety Management");
+  const [standard, setStandard] = useState("OISD Standard 117");
   const [docType, setDocType] = useState("all");
   const [scanning, setScanning] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [recentScans, setRecentScans] = useState<any[]>([]);
+  const [expandedClauses, setExpandedClauses] = useState<Record<number, boolean>>({});
 
-  // Load recent scans from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('recent_compliance_scans');
@@ -27,6 +27,7 @@ export function ComplianceDashboard() {
     setScanning(true);
     setError(null);
     setReport(null);
+    setExpandedClauses({});
     
     try {
       const data = await fetchJson('/compliance/scan', {
@@ -36,7 +37,6 @@ export function ComplianceDashboard() {
       });
       setReport(data);
       
-      // Save to recent scans
       const newScan = {
         standard_name: standard,
         date: new Date().toISOString(),
@@ -44,7 +44,7 @@ export function ComplianceDashboard() {
       };
       
       setRecentScans(prev => {
-        const updated = [newScan, ...prev].slice(0, 5); // Keep last 5
+        const updated = [newScan, ...prev].slice(0, 5);
         localStorage.setItem('recent_compliance_scans', JSON.stringify(updated));
         return updated;
       });
@@ -60,49 +60,62 @@ export function ComplianceDashboard() {
     if (!report) return;
     
     if (report.report_id) {
-      // Open PDF in new tab, bypassing fetch/CORS blob issues
       window.open(`http://localhost:8000/api/compliance/report/${report.report_id}/pdf`, '_blank');
-    } else {
-      // Fallback for older reports
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(report, null, 2));
-      const downloadAnchorNode = document.createElement('a');
-      downloadAnchorNode.setAttribute("href", dataStr);
-      downloadAnchorNode.setAttribute("download", `compliance_report_${new Date().getTime()}.json`);
-      document.body.appendChild(downloadAnchorNode);
-      downloadAnchorNode.click();
-      downloadAnchorNode.remove();
     }
   };
 
-  const scoreColor = report?.overall_score >= 90 ? 'text-operational' : 
-                     report?.overall_score >= 70 ? 'text-warning' : 'text-critical';
+  const toggleClause = (idx: number) => {
+    setExpandedClauses(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 85) return '#10b981'; // green (operational)
+    if (score >= 60) return '#f59e0b'; // amber (warning)
+    return '#ef4444'; // red (critical)
+  };
+
+  const getScoreColorClass = (score: number) => {
+    if (score >= 85) return 'text-status-success';
+    if (score >= 60) return 'text-amber-500';
+    return 'text-status-error';
+  };
+
+  const getStatusIcon = (status: string) => {
+    const s = status?.toLowerCase();
+    if (s === 'compliant' || s === 'not-applicable') return <CheckCircle2 size={16} className="text-status-success" />;
+    if (s === 'partial') return <AlertCircle size={16} className="text-amber-500" />;
+    return <XCircle size={16} className="text-status-error" />;
+  };
+
+  const scoreColorStr = report?.overall_score !== undefined ? getScoreColor(report.overall_score) : '#94a3b8';
 
   return (
-    <div className="max-w-7xl mx-auto h-full flex flex-col p-6">
+    <div className="max-w-[1400px] mx-auto h-full flex flex-col p-[28px] md:p-[32px]">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold mb-1">Compliance Gap Scanner</h1>
-          <p className="text-text-muted text-sm">
-            Audit the facility's knowledge base against regulatory frameworks.
+          <h1 className="text-xl font-semibold mb-1 text-text">Compliance Gap Scanner</h1>
+          <p className="text-text-muted text-[13px]">
+            Audit the facility's knowledge base against regulatory frameworks clause-by-clause.
           </p>
         </div>
         
         {report && (
           <button 
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-surface-alt border border-border rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-border rounded text-[13px] font-medium hover:bg-slate-50 transition-colors shadow-sm"
           >
-            <Download size={16} /> Export Report
+            <Download size={16} />
+            Export PDF Report
           </button>
         )}
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-0">
+      <div className="r-grid-3 flex-1 min-h-0">
         {/* Left Side: Setup */}
-        <div className="w-1/3 flex flex-col gap-6">
-          <div className="bg-surface-alt border border-border rounded-xl p-5">
-            <h3 className="font-semibold flex items-center gap-2 mb-4">
-              <ShieldAlert size={18} className="text-primary" />
+        <div className="dash-stack col-span-1">
+          <div className="card p-5">
+            <h3 className="font-semibold flex items-center gap-2 mb-4 text-[13px]">
+              <ShieldAlert size={16} className="text-primary" />
               Scan Configuration
             </h3>
             
@@ -116,10 +129,6 @@ export function ComplianceDashboard() {
               >
                 <option value="OISD Standard 117">OISD Standard 117 (Pressure Vessels)</option>
                 <option value="Factory Act 1948">Factory Act 1948 (Hazardous Processes)</option>
-                <option value="OSHA 1910.119 - Process Safety Management">OSHA 1910.119 (PSM)</option>
-                <option value="ISO 9001:2015 - Quality Management">ISO 9001:2015</option>
-                <option value="API 570 - Piping Inspection Code">API 570</option>
-                <option value="EPA RMP - Risk Management Plan">EPA RMP</option>
               </select>
             </div>
 
@@ -131,27 +140,24 @@ export function ComplianceDashboard() {
                 className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-primary/50 transition-colors"
                 disabled={scanning}
               >
-                <option value="all">All Documents</option>
-                <option value="manual">Manuals</option>
-                <option value="procedure">Procedures / SOPs</option>
-                <option value="report">Inspection Reports</option>
+                <option value="all">Auto-detect Applicable Documents</option>
+                <option value="manual">Manuals Only</option>
+                <option value="procedure">Procedures / SOPs Only</option>
+                <option value="report">Inspection Reports Only</option>
               </select>
             </div>
             
             <button 
               onClick={runScan}
               disabled={scanning}
-              className="w-full py-2.5 bg-primary/10 text-primary border border-primary/20 rounded-lg font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-2.5 bg-primary text-white rounded font-medium text-[13px] flex items-center justify-center gap-2 hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             >
-              {scanning ? (
-                <><Loader2 size={16} className="animate-spin" /> Scanning KB...</>
-              ) : (
-                <><Play size={16} /> Run Full Scan</>
-              )}
+              {scanning ? <Loader2 size={16} className="animate-spin" /> : <Play size={16} />}
+              {scanning ? "Scanning KB..." : "Run Clause-by-Clause Scan"}
             </button>
           </div>
           
-          <div className="bg-surface-alt border border-border rounded-xl p-5 flex-1 overflow-y-auto">
+          <div className="card p-5 flex-1 overflow-y-auto">
              <h3 className="font-semibold text-sm mb-3">Recent Scans</h3>
              <div className="space-y-3">
                {recentScans.length === 0 ? (
@@ -166,10 +172,7 @@ export function ComplianceDashboard() {
                            {scan.standard_name.split('-')[0].trim()}
                          </span>
                        </div>
-                       <span className={`text-xs font-bold font-mono ${
-                         scan.score >= 90 ? 'text-operational' : 
-                         scan.score >= 70 ? 'text-warning' : 'text-critical'
-                       }`}>
+                       <span className={`text-xs font-bold font-mono ${getScoreColorClass(scan.score)}`}>
                          {scan.score !== undefined ? `${scan.score}%` : 'N/A'}
                        </span>
                      </div>
@@ -184,97 +187,151 @@ export function ComplianceDashboard() {
         </div>
 
         {/* Right Side: Results */}
-        <div className="w-2/3 bg-surface-alt border border-border rounded-xl overflow-hidden flex flex-col relative">
+        <div className="card col-span-1 md:col-span-2 overflow-hidden flex flex-col relative">
           {!report && !scanning && !error ? (
             <div className="flex-1 flex flex-col items-center justify-center text-text-dim p-10 text-center">
               <ShieldAlert size={48} className="mb-4 opacity-20" />
               <h3 className="text-lg font-medium text-text mb-2">No Active Report</h3>
-              <p className="text-sm max-w-sm">Select a standard on the left and run a scan to identify compliance gaps in the current document base.</p>
+              <p className="text-sm max-w-sm">Select a standard on the left and run a scan to perform a clause-by-clause audit of your document base.</p>
             </div>
           ) : scanning ? (
              <div className="flex-1 flex flex-col items-center justify-center text-text-dim p-10 text-center space-y-4">
               <Loader2 size={48} className="animate-spin text-primary opacity-80" />
               <div>
                 <h3 className="text-lg font-medium text-text mb-1">Auditing Documentation...</h3>
-                <p className="text-sm">The compliance agent is scanning vector embeddings against {standard}.</p>
+                <p className="text-sm">Retrieving evidence and evaluating {standard} clause-by-clause.</p>
               </div>
             </div>
           ) : error ? (
             <div className="flex-1 flex items-center justify-center p-10">
-              <div className="bg-critical/10 text-critical border border-critical/20 rounded-xl p-6 max-w-md text-center">
+              <div className="bg-status-error/10 text-status-error border-status-error/20 rounded-xl p-6 max-w-md text-center">
                 <AlertTriangle size={32} className="mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Scan Failed</h3>
                 <p className="text-sm opacity-90">{error}</p>
               </div>
             </div>
           ) : report && (
-            <div className="flex-1 overflow-y-auto">
-              {/* Header */}
-              <div className="p-6 border-b border-border bg-surface-alt/50 flex items-start justify-between">
-                <div>
+            <div className="flex-1 overflow-y-auto flex flex-col animate-fade-in">
+              {/* Header & Radial Dial */}
+              <div className="p-6 border-b border-border bg-white flex items-center justify-between">
+                <div className="flex-1 pr-6">
                   <h2 className="text-xl font-bold mb-1">{report.standard_name}</h2>
-                  <p className="text-sm text-text-muted flex items-center gap-2">
-                    <span>Scan Date: {new Date(report.scan_date).toLocaleDateString()}</span>
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className={`text-4xl font-bold font-mono ${scoreColor}`}>
-                    {report.overall_score !== undefined ? `${report.overall_score}%` : 'N/A'}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-wider text-text-dim mt-1 font-semibold">Compliance Score</div>
-                </div>
-              </div>
-
-              {/* Scanned Documents Info */}
-              {report.scanned_files && report.scanned_files.length > 0 && (
-                <div className="p-6 border-b border-border bg-primary/5">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-text-dim mb-2">Knowledge Base Scope</h3>
-                  <p className="text-sm text-text-muted mb-2">This audit scanned {report.scanned_files.length} document(s) from the facility database:</p>
-                  <ul className="text-sm font-mono text-text-dim list-disc pl-5">
-                    {report.scanned_files.map((file: string, idx: number) => (
-                      <li key={idx}>{file}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              {/* Summary */}
-              <div className="p-6 border-b border-border">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-text-dim mb-3">Executive Summary</h3>
-                <p className="text-sm text-text-muted leading-relaxed">{report.summary}</p>
-              </div>
-              
-              {/* Gaps */}
-              <div className="p-6">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-text-dim mb-4 flex items-center justify-between">
-                  <span>Identified Gaps ({report.gaps?.length || 0})</span>
-                </h3>
-                
-                <div className="space-y-4">
-                  {report.gaps?.length === 0 ? (
-                    <div className="p-6 text-center border border-border rounded-xl bg-operational/5 text-operational flex flex-col items-center gap-2">
-                      <CheckCircle size={24} />
-                      <span className="font-medium">No gaps found. Full compliance detected!</span>
+                  <p className="text-[13px] text-text-muted leading-relaxed mb-4">{report.summary}</p>
+                  
+                  <div className="flex gap-4">
+                    <div className="bg-surface-alt px-3 py-1.5 rounded-lg border border-border">
+                      <span className="text-[10px] uppercase text-text-dim font-bold block mb-0.5">Scanned</span>
+                      <span className="text-sm font-medium">{report.scanned_files?.length || 0} Documents</span>
                     </div>
+                    <div className="bg-surface-alt px-3 py-1.5 rounded-lg border border-border">
+                      <span className="text-[10px] uppercase text-text-dim font-bold block mb-0.5">Date</span>
+                      <span className="text-sm font-medium">{new Date(report.scan_date).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Radial Dial */}
+                <div className="relative w-32 h-32 flex-shrink-0 flex items-center justify-center">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    {/* Background Ring */}
+                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="currentColor" strokeWidth="8" className="text-border" />
+                    {/* Progress Ring */}
+                    <circle 
+                      cx="50" cy="50" r="40" 
+                      fill="transparent" 
+                      stroke={scoreColorStr} 
+                      strokeWidth="8" 
+                      strokeDasharray={`${(report.overall_score / 100) * 251.2} 251.2`}
+                      strokeLinecap="round"
+                      className="transition-all duration-1000 ease-out"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-3xl font-bold font-mono ${getScoreColorClass(report.overall_score)}`}>{report.overall_score}%</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Detailed Findings - Clauses */}
+              <div className="p-6 bg-surface flex-1">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-text-dim mb-4">Clause-by-Clause Findings</h3>
+                
+                <div className="space-y-3">
+                  {(!report.gaps || report.gaps.length === 0) ? (
+                     <div className="text-sm text-text-dim italic text-center p-6 bg-surface border border-border rounded-lg">No clauses found in report.</div>
                   ) : (
-                    report.gaps?.map((gap: any, i: number) => (
-                      <div key={i} className="border border-border rounded-xl p-4 bg-surface hover:border-primary/30 transition-colors">
-                        <div className="flex items-start justify-between mb-3">
-                          <h4 className="font-semibold text-text flex-1 pr-4">{gap.finding}</h4>
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider shrink-0 ${
-                            gap.severity === 'high' ? 'bg-critical/10 text-critical border border-critical/20' :
-                            gap.severity === 'medium' ? 'bg-warning/10 text-warning border border-warning/20' :
-                            'bg-surface-raised text-text-muted border border-border'
-                          }`}>
-                            {gap.severity} Priority
-                          </span>
+                    report.gaps.map((clause: any, i: number) => {
+                      const isExpanded = !!expandedClauses[i];
+                      const statusLower = clause.status?.toLowerCase();
+                      
+                      const badgeClass = statusLower === 'compliant' || statusLower === 'not-applicable' 
+                        ? 'bg-status-success/10 text-status-success border-status-success/20' 
+                        : statusLower === 'partial' 
+                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                        : 'bg-status-error/10 text-status-error border-status-error/20';
+
+                      return (
+                        <div key={i} className="border border-border rounded-xl bg-surface overflow-hidden transition-all shadow-sm hover:shadow-md">
+                          {/* Card Header (Always Visible) */}
+                          <div 
+                            className="p-4 flex items-center cursor-pointer hover:bg-surface-raised/30 transition-colors"
+                            onClick={() => toggleClause(i)}
+                          >
+                            <div className="mr-3 text-text-muted">
+                              {isExpanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                            </div>
+                            <div className="flex-1 min-w-0 pr-4">
+                              <div className="flex items-center gap-3 mb-1">
+                                <h4 className="font-semibold text-sm truncate">{clause.clause_number}</h4>
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border flex items-center gap-1 ${badgeClass}`}>
+                                  {getStatusIcon(clause.status)}
+                                  {clause.status}
+                                </span>
+                              </div>
+                              <p className="text-xs text-text-dim truncate">{clause.clause_text_summary}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Expanded Content */}
+                          {isExpanded && (
+                            <div className="p-4 pt-0 border-t border-border/50 bg-surface-raised/10">
+                              <div className="mt-4 grid grid-cols-1 gap-4">
+                                <div>
+                                  <h5 className="text-[10px] font-bold uppercase tracking-wider text-text-dim mb-2">Finding Summary</h5>
+                                  <p className="text-sm text-text leading-relaxed bg-surface p-3 rounded border border-border">{clause.finding_title || clause.ui_summary || clause.gap_description}</p>
+                                </div>
+                                
+                                {clause.evidence && clause.evidence.length > 0 && (
+                                  <div>
+                                    <h5 className="text-[10px] font-bold uppercase tracking-wider text-text-dim mb-2">Cited Evidence</h5>
+                                    <div className="space-y-2">
+                                      {clause.evidence.map((ev: any, j: number) => (
+                                        <div key={j} className="bg-surface p-3 rounded border border-border flex flex-col gap-1">
+                                          <div className="flex items-center gap-2 text-xs font-mono text-primary">
+                                            <FileText size={12} /> {ev.document}
+                                          </div>
+                                          <p className="text-xs text-text-muted italic">"{ev.exact_quote || ev.excerpt_summary}"</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {(statusLower === 'gap' || statusLower === 'partial') && (clause.remediation_action || clause.remediation_summary || clause.remediation) && clause.remediation !== 'N/A' && (
+                                  <div>
+                                    <h5 className="text-[10px] font-bold uppercase tracking-wider text-text-dim mb-2">Required Action</h5>
+                                    <div className="bg-amber-500/10 text-amber-600 p-3 rounded border border-amber-500/20 text-sm flex items-start gap-2">
+                                      <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                                      <p>{clause.remediation_action || clause.remediation_summary || clause.remediation}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                        <div className="bg-surface-raised border border-border/50 rounded p-3 mt-2">
-                          <span className="text-[10px] font-semibold uppercase tracking-wider text-primary mb-1 block">Recommendation</span>
-                          <p className="text-xs text-text-muted">{gap.recommendation}</p>
-                        </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>

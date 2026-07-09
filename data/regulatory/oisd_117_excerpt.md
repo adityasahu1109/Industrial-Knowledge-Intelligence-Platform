@@ -1,6 +1,12 @@
+---
+applies_to:
+  - "sop"
+  - "inspection_report"
+  - "manual"
+---
 # OISD Standard 117
-## Clause 8.3.2: Pressure Vessel Inspection
 
+## Clause 8.3.2: Pressure Vessel Inspection
 1. All pressure vessels handling hazardous or flammable materials MUST be inspected externally every 12 months.
 2. Internal inspections must be conducted every 36 months, or more frequently if dictated by corrosion rates.
 3. Safety Relief Valves (SRV) attached to pressure vessels must be tested and recalibrated every 12 months.

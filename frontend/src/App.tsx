@@ -1,4 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { ChatPage } from './components/chat/ChatPage'

@@ -1,6 +1,6 @@
 import type { ChatMessage } from '../../types/chat';
 import { StreamingText } from './StreamingText';
-import { FileText, Terminal } from 'lucide-react';
+import { Terminal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';

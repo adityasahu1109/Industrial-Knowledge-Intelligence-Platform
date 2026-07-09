@@ -74,17 +74,17 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 text-sm text-text-muted bg-surface-alt px-3 py-1.5 rounded-lg border border-border">
-          <FileType size={16} />
-          <span>Auto-classification Active</span>
+        <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wider text-text-muted bg-surface-page px-3 py-1.5 border border-border">
+          <FileType size={14} />
+          <span className="uppercase">Auto-classification Active</span>
         </div>
       </div>
       
       <div 
-        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all cursor-pointer ${
+        className={`border border-dashed p-8 text-center transition-all cursor-pointer card shadow-none ${
           isDragging 
             ? 'border-primary bg-primary/5 scale-[1.01]' 
-            : 'border-border bg-surface-alt/30 hover:border-primary/30 hover:bg-primary/5'
+            : 'border-border bg-white hover:border-primary/50 hover:bg-slate-50'
         }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
@@ -111,17 +111,16 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
           )}
         </div>
         
-        <h3 className="text-lg font-medium mb-1 text-text-muted">
+        <h3 className="text-[14px] font-semibold mb-1 text-text">
           {uploading ? 'Uploading and processing...' : 'Drag & drop industrial documents or drawings'}
         </h3>
-        <p className="text-xs text-text-dim mb-4">
-          {error ? <span className="text-critical">{error}</span> : 'PDF, DOCX, XLSX, PNG, JPG files'}
+        <p className="text-[11px] text-text-muted mb-4">
+          {error ? <span className="text-status-error">{error}</span> : 'PDF, DOCX, XLSX, PNG, JPG files'}
         </p>
-        
         <button 
           disabled={uploading}
-          className="px-5 py-2 bg-surface-raised border border-border rounded-lg text-sm text-text-muted hover:text-text hover:border-border-active transition-all disabled:opacity-50"
-          onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+          onClick={(e: React.MouseEvent) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+          className="px-6 py-2 bg-white border border-border rounded text-[13px] font-medium text-text hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
         >
           Select Files
         </button>

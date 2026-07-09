@@ -1,3 +1,9 @@
+---
+applies_to:
+  - "sop"
+  - "inspection_report"
+  - "manual"
+---
 # Factory Act 1948 - Hazardous Processes
 
 ## Section 41C: Specific Responsibility of the Occupier in relation to Hazardous Processes

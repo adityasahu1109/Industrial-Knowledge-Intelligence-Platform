@@ -8,7 +8,7 @@ import { GraphFilters } from './GraphFilters';
 export function GraphExplorer() {
   const [data, setData] = useState({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
-  const fgRef = useRef<any>();
+  const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -103,7 +103,7 @@ export function GraphExplorer() {
                 ctx.font = `${fontSize}px Sans-Serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillStyle = 'rgba(226, 232, 240, 0.8)';
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.8)'; // slate-900 for light mode
                 ctx.fillText(label, node.x, node.y + (6 + fontSize));
               }
             }}

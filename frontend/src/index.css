@@ -2,28 +2,29 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  /* === Primary Surfaces === */
-  --color-surface:        #0a0e1a;   /* Deep navy-black — main background */
-  --color-surface-alt:    #111827;   /* Slightly lighter — cards, panels */
-  --color-surface-raised: #1a2035;   /* Raised elements — modals, dropdowns */
-  --color-surface-hover:  #1e2a3f;   /* Hover state for interactive surfaces */
+  /* === BHEL Color Palette === */
+  --color-bhel-navy:      #002A54;
+  --color-surface-page:   #f1f5f9;
+  --color-surface-card:   #ffffff;
+  
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-muted:     #94a3b8;
+  
+  --color-border-subtle:  #e2e8f0;
+  
+  /* Status Colors */
+  --color-status-success: #22c55e;
+  --color-status-error:   #dc2626;
 
-  /* === Borders === */
-  --color-border:         #1e293b;   /* Default borders — subtle */
-  --color-border-active:  #334155;   /* Active/focused borders */
-
-  /* === Text Hierarchy === */
-  --color-text:           #e2e8f0;   /* Primary text — high readability */
-  --color-text-muted:     #64748b;   /* Secondary text — labels, hints */
-  --color-text-dim:       #475569;   /* Tertiary — timestamps, metadata */
-
-  /* === Semantic Colors (Industrial Meaning) === */
-  --color-primary:        #22d3ee;   /* Cyan-400 — primary actions, active states */
-  --color-primary-muted:  #0e7490;   /* Cyan-800 — subtle primary backgrounds */
-  --color-operational:    #10b981;   /* Emerald — system online, complete, healthy */
-  --color-warning:        #f59e0b;   /* Amber — caution, processing, attention */
-  --color-critical:       #ef4444;   /* Red — errors, failures, critical alerts */
-  --color-data:           #818cf8;   /* Indigo-400 — data points, graph nodes, stats */
+  /* Overriding default Tailwind colors for ease of use */
+  --color-primary:        var(--color-bhel-navy);
+  --color-surface:        var(--color-surface-page);
+  --color-surface-alt:    var(--color-surface-card);
+  --color-text:           var(--color-text-primary);
+  --color-text-muted:     var(--color-text-secondary);
+  --color-text-dim:       #94a3b8;
+  --color-border:         var(--color-border-subtle);
 
   /* === Typography === */
   --font-sans:  'Inter', system-ui, sans-serif;
@@ -35,21 +36,65 @@
     @apply bg-surface text-text font-sans antialiased;
     margin: 0;
     min-height: 100vh;
+    font-size: 13px; /* Data Densification */
   }
 
-  /* Scrollbar styling for industrial look */
+  /* Minimalist 6px scrollbars per BHEL spec */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
   ::-webkit-scrollbar-track {
-    background: var(--color-surface);
+    background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--color-border-active);
+    background: #cbd5e1;
     border-radius: 3px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: var(--color-text-dim);
+    background: #94a3b8;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-alt border border-border rounded-[12px] shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)];
+  }
+
+  .dash-stack {
+    @apply flex flex-col gap-[22px];
+  }
+
+  /* Responsive Grids */
+  .r-grid-4 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  }
+  
+  .r-grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6;
+  }
+  
+  .r-grid-2 {
+    @apply grid grid-cols-1 lg:grid-cols-2 gap-6;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.4s ease-out forwards;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.5s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 }

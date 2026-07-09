@@ -3,31 +3,31 @@ import { MessageSquare, FileText, Activity, ShieldAlert, GitBranch, PenTool, Hex
 
 export function Sidebar() {
   return (
-    <aside className="w-64 bg-surface-alt border-r border-border flex flex-col shrink-0">
+    <aside className="w-[256px] bg-[#002A54] text-white flex flex-col shrink-0 shadow-lg z-20">
       {/* Brand Area */}
-      <div className="px-5 py-6 border-b border-border">
+      <div className="px-6 py-6 border-b border-white/10">
         <div className="flex items-center gap-2 mb-1">
-          <Hexagon className="text-primary" size={24} strokeWidth={2.5} />
-          <h1 className="font-bold text-lg tracking-tight text-text">IKIP</h1>
+          <Hexagon className="text-white" size={24} strokeWidth={2.5} />
+          <h1 className="font-bold text-lg tracking-tight text-white">IKIP</h1>
         </div>
-        <p className="text-xs text-text-dim leading-tight">
-          Industrial Knowledge<br />Intelligence Platform
+        <p className="text-[11px] text-white/70 leading-tight uppercase tracking-wider mt-2">
+          Industrial Knowledge<br/>Intelligence Platform
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto py-4">
         {/* Operations Section */}
-        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-dim px-5 pt-5 pb-2">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/50 px-6 pt-2 pb-3">
           Operations
         </div>
-        <nav className="flex flex-col">
+        <nav className="flex flex-col mb-4">
           <NavLink
             to="/chat"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+              `flex items-center gap-3 px-6 py-3 text-[13px] transition-colors ${
                 isActive 
-                  ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium' 
-                  : 'border-l-2 border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
+                  ? 'bg-white/10 text-white font-medium border-l-4 border-status-success' 
+                  : 'border-l-4 border-transparent text-white/70 hover:text-white hover:bg-white/5'
               }`
             }
           >
@@ -37,10 +37,10 @@ export function Sidebar() {
           <NavLink
             to="/documents"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+              `flex items-center gap-3 px-6 py-3 text-[13px] transition-colors ${
                 isActive 
-                  ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium' 
-                  : 'border-l-2 border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
+                  ? 'bg-white/10 text-white font-medium border-l-4 border-status-success' 
+                  : 'border-l-4 border-transparent text-white/70 hover:text-white hover:bg-white/5'
               }`
             }
           >
@@ -50,10 +50,10 @@ export function Sidebar() {
           <NavLink
             to="/graph"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+              `flex items-center gap-3 px-6 py-3 text-[13px] transition-colors ${
                 isActive 
-                  ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium' 
-                  : 'border-l-2 border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
+                  ? 'bg-white/10 text-white font-medium border-l-4 border-status-success' 
+                  : 'border-l-4 border-transparent text-white/70 hover:text-white hover:bg-white/5'
               }`
             }
           >
@@ -63,17 +63,17 @@ export function Sidebar() {
         </nav>
 
         {/* Analysis Section */}
-        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-text-dim px-5 pt-6 pb-2">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-white/50 px-6 pt-4 pb-3">
           Analysis
         </div>
         <nav className="flex flex-col gap-0.5">
           <NavLink
             to="/drawings"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+              `flex items-center gap-3 px-6 py-3 text-[13px] transition-colors ${
                 isActive 
-                  ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium' 
-                  : 'border-l-2 border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
+                  ? 'bg-white/10 text-white font-medium border-l-4 border-status-success' 
+                  : 'border-l-4 border-transparent text-white/70 hover:text-white hover:bg-white/5'
               }`
             }
           >
@@ -84,40 +84,26 @@ export function Sidebar() {
           <NavLink
             to="/compliance"
             className={({ isActive }) =>
-              `flex items-center gap-3 px-5 py-2.5 text-sm transition-colors ${
+              `flex items-center gap-3 px-6 py-3 text-[13px] transition-colors ${
                 isActive 
-                  ? 'border-l-2 border-primary bg-primary/5 text-primary font-medium' 
-                  : 'border-l-2 border-transparent text-text-muted hover:text-text hover:bg-surface-hover'
+                  ? 'bg-white/10 text-white font-medium border-l-4 border-status-success' 
+                  : 'border-l-4 border-transparent text-white/70 hover:text-white hover:bg-white/5'
               }`
             }
           >
             <ShieldAlert size={18} />
             Compliance
           </NavLink>
-          
-          {[
-            { icon: <Activity size={18} />, label: 'Maintenance' },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center justify-between px-5 py-2.5 text-sm opacity-40 cursor-not-allowed border-l-2 border-transparent">
-              <div className="flex items-center gap-3 text-text-muted">
-                {item.icon}
-                {item.label}
-              </div>
-              <span className="text-[10px] bg-surface-raised px-1.5 py-0.5 rounded text-text-dim border border-border">
-                Soon
-              </span>
-            </div>
-          ))}
         </nav>
       </div>
 
       {/* Bottom Status */}
-      <div className="mt-auto px-5 py-4 border-t border-border flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-text-dim">
-          <span className="w-2 h-2 rounded-full bg-operational"></span>
-          Ollama: Connected
+      <div className="mt-auto px-6 py-4 border-t border-white/10 flex items-center justify-between bg-black/10">
+        <div className="flex items-center gap-2 text-[11px] text-white/70">
+          <span className="w-2 h-2 rounded-full bg-status-success"></span>
+          Connected
         </div>
-        <span className="text-xs font-mono text-text-dim opacity-50">v0.1.0</span>
+        <span className="text-[11px] font-mono text-white/30">v1.0.0</span>
       </div>
     </aside>
   )

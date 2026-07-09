@@ -2,7 +2,7 @@ import { Link } from 'lucide-react';
 
 interface CitationLinkProps {
   href?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   sources?: any[];
 }
 
@@ -11,9 +11,6 @@ export function CitationLink({ href, children, sources = [] }: CitationLinkProps
   if (href?.startsWith('#source-')) {
     const sourceIndex = parseInt(href.replace('#source-', '')) - 1;
     const source = sources[sourceIndex];
-    
-    // Extract the text content, usually it will be like "[1]"
-    const label = children?.toString() || "";
     
     return (
       <span className="group relative inline-flex items-center justify-center translate-y-[-2px] mx-1">

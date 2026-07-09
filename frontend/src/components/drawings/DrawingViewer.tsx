@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Target, Search, ChevronDown, CheckCircle2, Play, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Target, ChevronDown, CheckCircle2, Play, Image as ImageIcon, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
 interface DrawingViewerProps {
@@ -168,7 +168,7 @@ export function DrawingViewer({ initialDrawingId }: DrawingViewerProps) {
                           {comp.tag}
                         </span>
                         {isKnown && (
-                          <span className="flex items-center gap-1 text-[10px] text-operational bg-operational/10 px-1.5 py-0.5 rounded border border-operational/20">
+                          <span className="flex items-center gap-1 text-[10px] text-status-success bg-status-success/10 px-1.5 py-0.5 rounded border border-status-success/20">
                             <CheckCircle2 size={10} /> Known in Graph
                           </span>
                         )}

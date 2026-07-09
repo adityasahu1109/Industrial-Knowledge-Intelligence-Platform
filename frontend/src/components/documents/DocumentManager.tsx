@@ -118,7 +118,7 @@ export function DocumentManager() {
           <div className="text-[10px] text-text-dim uppercase tracking-wider mt-1">Data Chunks</div>
         </div>
         <div className="bg-surface-alt border border-border rounded-xl p-4">
-          <div className="text-2xl font-semibold font-mono text-operational">{completedDocs}</div>
+          <div className="text-2xl font-semibold font-mono text-status-success">{completedDocs}</div>
           <div className="text-[10px] text-text-dim uppercase tracking-wider mt-1">Complete</div>
         </div>
         <div className="bg-surface-alt border border-border rounded-xl p-4">
@@ -185,7 +185,7 @@ export function DocumentManager() {
                 </div>
                 
                 <div className="col-span-3 flex items-center gap-2">
-                  {doc.status === 'complete' && <span className="inline-flex items-center gap-1.5 bg-operational/10 text-operational border border-operational/20 px-2.5 py-0.5 rounded-full text-[11px] font-medium"><CheckCircle size={12} /> Complete</span>}
+                  {doc.status === 'complete' && <span className="inline-flex items-center gap-1.5 bg-status-success/10 text-status-success border border-status-success/20 px-2.5 py-0.5 rounded-full text-[11px] font-medium"><CheckCircle size={12} /> Complete</span>}
                   {doc.status === 'processing' && <span className="inline-flex items-center gap-1.5 bg-warning/10 text-warning border border-warning/20 px-2.5 py-0.5 rounded-full text-[11px] font-medium"><Loader2 size={12} className="animate-spin" /> Processing</span>}
                   {doc.status === 'pending' && <span className="inline-flex items-center gap-1.5 bg-text-dim/10 text-text-muted border border-text-dim/20 px-2.5 py-0.5 rounded-full text-[11px] font-medium"><Loader2 size={12} /> Queued</span>}
                   {doc.status === 'failed' && <span className="inline-flex items-center gap-1.5 bg-critical/10 text-critical border border-critical/20 px-2.5 py-0.5 rounded-full text-[11px] font-medium"><AlertCircle size={12} /> Failed</span>}
