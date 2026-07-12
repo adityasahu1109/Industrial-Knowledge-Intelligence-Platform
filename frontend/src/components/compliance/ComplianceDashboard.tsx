@@ -21,7 +21,68 @@ export function ComplianceDashboard() {
     } catch (e) {
       console.error("Could not load recent scans", e);
     }
+
+    const activeJob = sessionStorage.getItem('active_compliance_job');
+    if (activeJob) {
+      pollJob(activeJob);
+    }
   }, []);
+
+  const pollJob = async (jobId: string) => {
+    setScanning(true);
+    setError(null);
+    setReport(null);
+    setExpandedClauses({});
+
+    try {
+      const resp = await fetch(`http://localhost:8000/api/jobs/${jobId}/stream`);
+      if (!resp.ok) throw new Error("Stream failed");
+      
+      const reader = resp.body!.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const lines = decoder.decode(value).split("\n");
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          const payloadStr = line.slice(6).trim();
+          if (!payloadStr) continue;
+          
+          try {
+            const payload = JSON.parse(payloadStr);
+            if (payload.type === 'done') {
+              const data = payload.result;
+              setReport(data);
+              
+              const newScan = {
+                standard_name: data.standard_name || standard,
+                date: new Date().toISOString(),
+                score: data.overall_score
+              };
+              
+              setRecentScans(prev => {
+                const updated = [newScan, ...prev].slice(0, 5);
+                localStorage.setItem('recent_compliance_scans', JSON.stringify(updated));
+                return updated;
+              });
+            } else if (payload.type === 'error') {
+              setError(payload.error || "Scan failed");
+            }
+          } catch (e) {
+            console.error("Error parsing compliance stream", e);
+          }
+        }
+      }
+    } catch (e: any) {
+      setError(e.message || "Connection lost");
+    } finally {
+      setScanning(false);
+      sessionStorage.removeItem('active_compliance_job');
+    }
+  };
 
   const runScan = async () => {
     setScanning(true);
@@ -35,23 +96,13 @@ export function ComplianceDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ standard_name: standard, doc_type: docType })
       });
-      setReport(data);
       
-      const newScan = {
-        standard_name: standard,
-        date: new Date().toISOString(),
-        score: data.overall_score
-      };
-      
-      setRecentScans(prev => {
-        const updated = [newScan, ...prev].slice(0, 5);
-        localStorage.setItem('recent_compliance_scans', JSON.stringify(updated));
-        return updated;
-      });
-      
+      if (data.job_id) {
+        sessionStorage.setItem('active_compliance_job', data.job_id);
+        pollJob(data.job_id);
+      }
     } catch (err: any) {
-      setError(err.message || "Scan failed");
-    } finally {
+      setError(err.message || "Failed to start scan");
       setScanning(false);
     }
   };

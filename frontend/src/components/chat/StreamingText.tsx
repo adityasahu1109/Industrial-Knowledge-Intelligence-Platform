@@ -11,7 +11,7 @@ interface StreamingTextProps {
 
 export function StreamingText({ text, loading, sources = [] }: StreamingTextProps) {
   return (
-    <div className="prose prose-invert max-w-none text-sm">
+    <div className="chat-prose">
       <ReactMarkdown 
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{

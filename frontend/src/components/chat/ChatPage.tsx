@@ -5,10 +5,37 @@ import type { ChatMessage } from '../../types/chat';
 import { Send, Mic, Hexagon } from 'lucide-react';
 
 export function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const saved = sessionStorage.getItem('chat_messages');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [displayLimit, setDisplayLimit] = useState(10);
   const [input, setInput] = useState('');
-  const { text: streamingText, sources: streamingSources, loading, query } = useSSEStream();
+  const { text: streamingText, sources: streamingSources, attachments: streamingAttachments, loading, query } = useSSEStream();
   const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    sessionStorage.setItem('chat_messages', JSON.stringify(messages));
+  }, [messages]);
+
+  // Handle stream completion from a reconnected session
+  useEffect(() => {
+    if (!loading && streamingText && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg.role === 'assistant' && lastMsg.content === '') {
+        setMessages(prev => {
+          const newMsgs = [...prev];
+          newMsgs[newMsgs.length - 1] = {
+            ...lastMsg,
+            content: streamingText,
+            sources: streamingSources,
+            attachments: streamingAttachments
+          };
+          return newMsgs;
+        });
+      }
+    }
+  }, [loading, streamingText, streamingSources, streamingAttachments]);
 
   // Auto-scroll
   useEffect(() => {
@@ -18,20 +45,13 @@ export function ChatPage() {
   const handleSend = async (userQuery: string) => {
     if (!userQuery.trim() || loading) return;
 
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'user',
-      content: userQuery
-    }]);
+    setMessages(prev => [
+      ...prev, 
+      { id: Date.now().toString(), role: 'user', content: userQuery },
+      { id: (Date.now() + 1).toString(), role: 'assistant', content: '' } // Placeholder for stream
+    ]);
 
-    const result = await query(userQuery);
-    
-    setMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      role: 'assistant',
-      content: result.text,
-      sources: result.sources
-    }]);
+    await query(userQuery);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -68,10 +88,13 @@ export function ChatPage() {
         </div>
       ) : (
         <MessageList 
-          messages={messages} 
+          messages={messages.slice(-displayLimit)} 
           loading={loading} 
           streamingText={streamingText}
           streamingSources={streamingSources}
+          streamingAttachments={streamingAttachments}
+          hasMore={messages.length > displayLimit}
+          onLoadMore={() => setDisplayLimit(prev => prev + 10)}
         />
       )}
       <div ref={endRef} />

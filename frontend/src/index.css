@@ -77,6 +77,25 @@
   .r-grid-2 {
     @apply grid grid-cols-1 lg:grid-cols-2 gap-6;
   }
+
+  .chat-prose {
+    @apply prose max-w-none text-sm text-text prose-p:leading-relaxed;
+    @apply prose-strong:font-semibold prose-strong:text-slate-900;
+    @apply prose-code:text-[#002A54] prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded-md prose-code:font-mono prose-code:text-[13px] prose-code:font-medium;
+    @apply prose-pre:bg-slate-900 prose-pre:text-slate-50 prose-pre:rounded-xl prose-pre:p-4 prose-pre:shadow-sm;
+    @apply prose-headings:font-bold prose-headings:text-slate-900 prose-headings:tracking-tight;
+    @apply prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:font-medium;
+    @apply prose-ul:list-disc prose-ul:pl-5 prose-ol:list-decimal prose-ol:pl-5 prose-li:my-1;
+    @apply prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:bg-primary/5 prose-blockquote:px-4 prose-blockquote:py-1 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:text-text-muted;
+  }
+  
+  .chat-prose code::before { content: none !important; }
+  .chat-prose code::after { content: none !important; }
+  
+  /* Reset inline code styles for code blocks */
+  .chat-prose pre code {
+    @apply bg-transparent p-0 text-inherit text-[13px] font-normal rounded-none shadow-none;
+  }
 }
 
 @layer utilities {

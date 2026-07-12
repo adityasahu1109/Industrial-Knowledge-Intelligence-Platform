@@ -1,14 +1,13 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from agents.compliance_agent import run_compliance_scan
-from core.database import get_db, ComplianceReport
+from core.database import get_db, ComplianceReport, Job
 from sqlalchemy.orm import Session
 import json
 import io
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+import uuid
+from routers.jobs import publish_sync
 
 router = APIRouter(prefix="/api/compliance", tags=["compliance"])
 
@@ -16,12 +15,38 @@ class ScanRequest(BaseModel):
     standard_name: str
     doc_type: str = "all"
 
+def run_compliance_job(job_id: str, standard_name: str, doc_type: str):
+    from core.database import SessionLocal
+    db = SessionLocal()
+    job = db.query(Job).filter(Job.id == job_id).first()
+    
+    try:
+        result = run_compliance_scan(standard_name, doc_type)
+        if "status" in result and result["status"] == "error":
+            raise Exception(result["message"])
+            
+        job.status = "done"
+        job.result_json = json.dumps(result)
+        db.commit()
+        publish_sync(job_id, {"type": "done", "result": result})
+    except Exception as e:
+        error_payload = {"type": "error", "error": str(e)}
+        job.status = "failed"
+        job.result_json = json.dumps(error_payload)
+        db.commit()
+        publish_sync(job_id, error_payload)
+    finally:
+        db.close()
+
 @router.post("/scan")
-def scan_documents(req: ScanRequest):
-    result = run_compliance_scan(req.standard_name, req.doc_type)
-    if "status" in result and result["status"] == "error":
-        raise HTTPException(status_code=500, detail=result["message"])
-    return result
+def scan_documents(req: ScanRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    job_id = str(uuid.uuid4())
+    job = Job(id=job_id, type="compliance_scan", status="running")
+    db.add(job)
+    db.commit()
+    
+    background_tasks.add_task(run_compliance_job, job_id, req.standard_name, req.doc_type)
+    return {"job_id": job_id}
 
 from fastapi.responses import HTMLResponse
 

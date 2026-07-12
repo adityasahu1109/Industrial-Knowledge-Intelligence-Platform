@@ -127,11 +127,35 @@ def process_drawing(file_path: str, doc_id: str, doc_type: str, filename: str, d
     
     return len(chunks)
 
-def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
+def ingest(file_path: str, doc_id: str, doc_type: str, filename: str, job_id: str = None):
     """
     Orchestrates the full ingestion flow.
     Runs as a background task.
     """
+    from core.database import Job
+    from routers.jobs import publish_sync
+    import json
+    
+    db = SessionLocal()
+    job = db.query(Job).filter(Job.id == job_id).first() if job_id else None
+    
+    def log_progress(msg: str):
+        print(msg)
+        if job:
+            payload = {"type": "progress", "message": msg}
+            payload_str = json.dumps(payload)
+            job.accumulated_output = (job.accumulated_output or '') + payload_str + '\n'
+            db.commit()
+            publish_sync(job_id, payload)
+            
+    def finish_job(status: str, result: dict = None):
+        if job:
+            job.status = status
+            if result:
+                job.result_json = json.dumps(result)
+            db.commit()
+            payload = {"type": "done" if status == "done" else "error", "done": True, "result": result}
+            publish_sync(job_id, payload)
     db = SessionLocal()
     doc = db.query(Document).filter(Document.id == doc_id).first()
     if not doc:
@@ -158,8 +182,11 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         
         doc_type = predicted_doc_type
         
+        log_progress(f"Document classified as: {doc_type}")
+        
         # Branch 1: Drawing Analysis
         if ext in ['png', 'jpg', 'jpeg'] or doc_type in ["p&id", "pfd", "pid"]:
+            log_progress("Analyzing drawing components and topology...")
             if doc_type.lower() in ["unsupported", "other"]:
                 raise ValueError("Unsupported drawing type.")
                 
@@ -168,10 +195,12 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
             doc.status = 'complete'
             doc.completed_at = datetime.utcnow()
             db.commit()
-            print(f"Drawing Ingestion complete for {filename} -- graph ready")
+            log_progress(f"Drawing Ingestion complete for {filename} -- graph ready")
+            finish_job("done", {"message": "Drawing successfully processed"})
             return
             
         # Branch 2: Standard Text Parsing
+        log_progress("Parsing text document...")
         pages = []
         if ext == 'pdf':
             if is_scanned(file_path):
@@ -212,11 +241,11 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
         doc.status = 'complete'
         doc.completed_at = datetime.utcnow()
         db.commit()
-        print(f"Ingestion complete for {filename} ({len(chunks)} chunks) -- chat ready")
+        log_progress(f"Ingestion complete for {filename} ({len(chunks)} chunks) -- chat ready")
         
         # 7. Entity extraction (non-blocking background stage)
         try:
-            print(f"[Stage 2] Extracting entities for {len(chunks)} chunks...")
+            log_progress(f"[Stage 2] Extracting entities for {len(chunks)} chunks...")
             batch_size = 3
             for i in range(0, len(chunks), batch_size):
                 batch = chunks[i:i+batch_size]
@@ -225,15 +254,18 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str):
                     store_entities_in_graph(doc_id, combined_text)
                 except Exception as e:
                     print(f"Warning: Entity extraction failed for batch {i}: {e}")
-            print(f"[Stage 2] Graph population complete for {filename}")
+            log_progress(f"[Stage 2] Graph population complete for {filename}")
         except Exception as e:
-            print(f"[Stage 2] Entity extraction failed for {filename}: {e}")
+            log_progress(f"[Stage 2] Entity extraction failed for {filename}: {e}")
+            
+        finish_job("done", {"message": "Document successfully processed"})
         
     except Exception as e:
-        print(f"Ingestion failed for {filename}: {e}")
+        log_progress(f"Ingestion failed for {filename}: {e}")
         traceback.print_exc()
         doc.status = 'failed'
         doc.error_details = str(e)
         db.commit()
+        finish_job("failed", {"error": str(e)})
     finally:
         db.close()

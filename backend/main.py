@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from core.database import init_db
 from core.ollama_client import verify_models
-from routers import documents, chat, graph, maintenance, drawings, compliance
+from routers import documents, chat, graph, maintenance, drawings, compliance, jobs
 import os
 
 # Ensure vector store and DB are initialized
@@ -16,6 +16,7 @@ async def lifespan(app: FastAPI):
     os.makedirs("./uploads", exist_ok=True)
     # Verify Ollama on startup
     verify_models()
+    jobs.init_jobs_loop()
     yield
     # Shutdown
 
@@ -36,5 +37,6 @@ app.include_router(graph.router)
 app.include_router(maintenance.router)
 app.include_router(drawings.router)
 app.include_router(compliance.router)
+app.include_router(jobs.router)
 
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")

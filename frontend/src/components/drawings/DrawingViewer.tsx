@@ -8,7 +8,7 @@ interface DrawingViewerProps {
 
 export function DrawingViewer({ initialDrawingId }: DrawingViewerProps) {
   const [drawings, setDrawings] = useState<any[]>([]);
-  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(initialDrawingId || null);
+  const [selectedDrawingId, setSelectedDrawingId] = useState<string | null>(() => sessionStorage.getItem('active_drawing_viewer_id') || initialDrawingId || null);
   const [drawingData, setDrawingData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +53,9 @@ export function DrawingViewer({ initialDrawingId }: DrawingViewerProps) {
 
   const handleSelectDrawing = (id: string) => {
     setSelectedDrawingId(id);
+    if (id) {
+      sessionStorage.setItem('active_drawing_viewer_id', id);
+    }
     if (id !== selectedDrawingId) {
       setDrawingData(null);
     }
@@ -99,7 +102,7 @@ export function DrawingViewer({ initialDrawingId }: DrawingViewerProps) {
                  <h4 className="text-base font-bold text-primary mb-4 flex items-center gap-2 border-b border-primary/10 pb-2">
                    <Target size={16} /> AI System Analysis
                  </h4>
-                 <div className="prose prose-sm dark:prose-invert max-w-none text-text">
+                 <div className="chat-prose">
                    <ReactMarkdown>
                      {drawingData.overall_analysis}
                    </ReactMarkdown>

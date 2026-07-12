@@ -15,7 +15,9 @@ async def upload_document(
     doc_type: str = Form("auto"),
     db: Session = Depends(get_db)
 ):
+    from core.database import Job
     doc_id = str(uuid.uuid4())
+    job_id = str(uuid.uuid4())
     filename = file.filename
     ext = filename.lower().split('.')[-1]
     
@@ -34,12 +36,15 @@ async def upload_document(
         status="pending"
     )
     db.add(db_doc)
+    
+    db_job = Job(id=job_id, type="document_upload", status="running", accumulated_output="")
+    db.add(db_job)
     db.commit()
     
     # Launch async ingestion
-    background_tasks.add_task(ingest, file_path, doc_id, doc_type, filename)
+    background_tasks.add_task(ingest, file_path, doc_id, doc_type, filename, job_id)
     
-    return {"doc_id": doc_id, "status": "processing"}
+    return {"doc_id": doc_id, "job_id": job_id, "status": "processing"}
 
 @router.get("")
 def list_documents(db: Session = Depends(get_db)):

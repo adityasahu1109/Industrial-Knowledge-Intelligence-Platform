@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { UploadCloud, AlertCircle, Loader2, FileType } from 'lucide-react';
 import { fetchJson } from '../../api/client';
 
@@ -6,7 +6,78 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(() => sessionStorage.getItem('active_upload_job'));
+  const [jobStatus, setJobStatus] = useState<string>('Uploading and processing...');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!activeJobId) return;
+    
+    let isMounted = true;
+    const abortController = new AbortController();
+    
+    const streamProgress = async () => {
+      setUploading(true);
+      try {
+        const resp = await fetch(`http://localhost:8000/api/jobs/${activeJobId}/stream`, {
+          signal: abortController.signal
+        });
+        
+        if (!resp.ok) throw new Error("Failed to stream job");
+        
+        const reader = resp.body!.getReader();
+        const decoder = new TextDecoder();
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const lines = decoder.decode(value).split("\n");
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            const payloadStr = line.slice(6).trim();
+            if (!payloadStr) continue;
+            
+            try {
+              const payload = JSON.parse(payloadStr);
+              if (payload.type === 'progress') {
+                if (isMounted) setJobStatus(payload.message);
+              } else if (payload.done || payload.type === 'done' || payload.type === 'error') {
+                if (isMounted) {
+                  setUploading(false);
+                  sessionStorage.removeItem('active_upload_job');
+                  setActiveJobId(null);
+                  setJobStatus('Uploading and processing...');
+                  onUploadSuccess();
+                }
+                return;
+              }
+            } catch (e) {
+              console.error("Parse error", e);
+            }
+          }
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error("Stream error", err);
+          if (isMounted) {
+             setUploading(false);
+             sessionStorage.removeItem('active_upload_job');
+             setActiveJobId(null);
+             setJobStatus('Uploading and processing...');
+             onUploadSuccess();
+          }
+        }
+      }
+    };
+    
+    streamProgress();
+    
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [activeJobId, onUploadSuccess]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -29,6 +100,8 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   };
 
   const handleUploadAll = async (files: File[]) => {
+    if (activeJobId) return; // Prevent multiple concurrent uploads for now
+    
     const allowedTypes = [
       "application/pdf", 
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -51,6 +124,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
     }
     
     setUploading(true);
+    setJobStatus('Initializing upload...');
     
     for (const file of validFiles) {
       const formData = new FormData();
@@ -58,17 +132,22 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
       formData.append("doc_type", "auto");
       
       try {
-        await fetchJson("/documents/upload", {
+        const data = await fetchJson("/documents/upload", {
           method: "POST",
           body: formData,
         });
+        
+        if (data.job_id) {
+          sessionStorage.setItem('active_upload_job', data.job_id);
+          setActiveJobId(data.job_id);
+          // Wait for this job to stream to completion via useEffect
+          return; // only handle first file for simplicity in demo session system
+        }
       } catch (err: any) {
         console.error("Failed to upload", file.name, err);
+        setUploading(false);
       }
     }
-    
-    setUploading(false);
-    onUploadSuccess();
   };
 
   return (
@@ -90,7 +169,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !uploading && fileInputRef.current?.click()}
       >
         <input 
           type="file" 
@@ -112,7 +191,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
         </div>
         
         <h3 className="text-[14px] font-semibold mb-1 text-text">
-          {uploading ? 'Uploading and processing...' : 'Drag & drop industrial documents or drawings'}
+          {uploading ? jobStatus : 'Drag & drop industrial documents or drawings'}
         </h3>
         <p className="text-[11px] text-text-muted mb-4">
           {error ? <span className="text-status-error">{error}</span> : 'PDF, DOCX, XLSX, PNG, JPG files'}

@@ -69,6 +69,18 @@ class DrawingTag(Base):
     type = Column(String, nullable=True)
     description = Column(String, nullable=True)
 
+class Job(Base):
+    __tablename__ = "jobs"
+
+    id = Column(String, primary_key=True)
+    type = Column(String, nullable=False) # 'chat' | 'compliance_scan'
+    status = Column(String, nullable=False, default='running') # 'running' | 'done' | 'failed'
+    accumulated_output = Column(String, nullable=True, default='')
+    result_json = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 def init_db():
     """Create all SQLite tables."""
     Base.metadata.create_all(bind=engine)

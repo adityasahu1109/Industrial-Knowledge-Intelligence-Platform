@@ -13,7 +13,7 @@ export function CitationLink({ href, children, sources = [] }: CitationLinkProps
     const source = sources[sourceIndex];
     
     return (
-      <span className="group relative inline-flex items-center justify-center translate-y-[-2px] mx-1">
+      <span className="not-prose group relative inline-flex items-center justify-center translate-y-[-2px] mx-1">
         <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/20 text-primary cursor-help hover:bg-primary hover:text-white transition-colors">
           <Link size={10} strokeWidth={3} />
         </span>
