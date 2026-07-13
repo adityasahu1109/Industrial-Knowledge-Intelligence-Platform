@@ -34,3 +34,4 @@ neo4j_data/
 drawing_analyzer_redesign.md
 compliance_redesign.md
 session_and_chat_visuals.md
+chat_streaming_implementation_instructions.md

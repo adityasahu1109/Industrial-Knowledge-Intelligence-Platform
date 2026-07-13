@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI):
     # Verify Ollama on startup
     verify_models()
     jobs.init_jobs_loop()
+    chat.init_chat_loop()
     yield
     # Shutdown
 

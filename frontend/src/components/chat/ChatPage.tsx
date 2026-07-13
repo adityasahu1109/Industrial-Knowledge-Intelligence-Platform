@@ -4,61 +4,138 @@ import { useSSEStream } from '../../hooks/useSSEStream';
 import type { ChatMessage } from '../../types/chat';
 import { Send, Mic, Hexagon } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+
 export function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    const saved = sessionStorage.getItem('chat_messages');
-    return saved ? JSON.parse(saved) : [];
+  const [sessionId] = useState<string>(() => {
+    let sid = sessionStorage.getItem('chat_session_id');
+    if (!sid) {
+      sid = crypto.randomUUID();
+      sessionStorage.setItem('chat_session_id', sid);
+    }
+    return sid;
   });
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [displayLimit, setDisplayLimit] = useState(10);
   const [input, setInput] = useState('');
-  const { text: streamingText, sources: streamingSources, attachments: streamingAttachments, loading, query } = useSSEStream();
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [activeMessageId, setActiveMessageId] = useState<string | null>(null);
+  
+  const { startStream, cancelStream, loading } = useSSEStream();
   const endRef = useRef<HTMLDivElement>(null);
 
+  // Initial load — fetch history, reconnect if a message is still generating
   useEffect(() => {
-    sessionStorage.setItem('chat_messages', JSON.stringify(messages));
-  }, [messages]);
-
-  // Handle stream completion from a reconnected session
-  useEffect(() => {
-    if (!loading && streamingText && messages.length > 0) {
-      const lastMsg = messages[messages.length - 1];
-      if (lastMsg.role === 'assistant' && lastMsg.content === '') {
-        setMessages(prev => {
-          const newMsgs = [...prev];
-          newMsgs[newMsgs.length - 1] = {
-            ...lastMsg,
-            content: streamingText,
-            sources: streamingSources,
-            attachments: streamingAttachments
-          };
-          return newMsgs;
-        });
+    async function loadHistory() {
+      try {
+        const resp = await fetch(`${API_URL}/chat/history/${sessionId}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          setMessages(data.messages);
+          
+          const generating = data.messages.find((m: ChatMessage) => m.status === 'generating' && m.role === 'assistant');
+          if (generating) {
+            setActiveMessageId(generating.id);
+            startStream(generating.id, generating.content.length, {
+              onToken: (token) => {
+                setMessages(prev => prev.map(m => 
+                  m.id === generating.id ? { ...m, content: m.content + token, status: 'generating' } : m
+                ));
+              },
+              onDone: (sources, attachments) => {
+                setMessages(prev => prev.map(m => 
+                  m.id === generating.id ? { ...m, sources, attachments, status: 'done' } : m
+                ));
+                setActiveMessageId(null);
+              },
+              onError: () => {
+                setMessages(prev => prev.map(m => 
+                  m.id === generating.id ? { ...m, status: 'interrupted' } : m
+                ));
+                setActiveMessageId(null);
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load history", e);
+      } finally {
+        setIsInitializing(false);
       }
     }
-  }, [loading, streamingText, streamingSources, streamingAttachments]);
+    loadHistory();
+  }, [sessionId]);
 
   // Auto-scroll
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingText]);
+  }, [messages, loading]);
 
   const handleSend = async (userQuery: string) => {
     if (!userQuery.trim() || loading) return;
+    const queryStr = userQuery.trim();
+    setInput('');
 
-    setMessages(prev => [
-      ...prev, 
-      { id: Date.now().toString(), role: 'user', content: userQuery },
-      { id: (Date.now() + 1).toString(), role: 'assistant', content: '' } // Placeholder for stream
-    ]);
+    try {
+      // POST /send — returns { message_id } immediately
+      const resp = await fetch(`${API_URL}/chat/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, query: queryStr, mode: "detailed" })
+      });
+      if (!resp.ok) throw new Error("Failed to send message");
+      const data = await resp.json();
+      const messageId = data.message_id;
 
-    await query(userQuery);
+      // Optimistic UI
+      setMessages(prev => [
+        ...prev,
+        { id: crypto.randomUUID(), role: 'user', content: queryStr, status: 'done' },
+        { id: messageId, role: 'assistant', content: '', status: 'generating' }
+      ]);
+      setActiveMessageId(messageId);
+
+      // GET /stream/{message_id} — connect to live SSE
+      startStream(messageId, 0, {
+        onToken: (token) => {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId ? { ...m, content: m.content + token } : m
+          ));
+        },
+        onDone: (sources, attachments) => {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId ? { ...m, sources, attachments, status: 'done' } : m
+          ));
+          setActiveMessageId(null);
+        },
+        onError: () => {
+          setMessages(prev => prev.map(m => 
+            m.id === messageId ? { ...m, status: 'interrupted' } : m
+          ));
+          setActiveMessageId(null);
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCancel = () => {
+    if (activeMessageId) {
+      cancelStream(activeMessageId);
+      setActiveMessageId(null);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleSend(input.trim());
-    setInput('');
+    handleSend(input);
   };
+
+  if (isInitializing) {
+    return <div className="h-full flex items-center justify-center text-text-dim">Loading session...</div>;
+  }
 
   return (
     <div className="h-full flex flex-col relative">
@@ -75,10 +152,7 @@ export function ChatPage() {
             ].map((suggestedQuery, i) => (
               <button
                 key={i}
-                onClick={() => {
-                  setInput(suggestedQuery);
-                  handleSend(suggestedQuery);
-                }}
+                onClick={() => handleSend(suggestedQuery)}
                 className="px-4 py-3 bg-surface-raised border border-border rounded-xl text-sm text-text-muted hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all text-left"
               >
                 {suggestedQuery}
@@ -89,12 +163,9 @@ export function ChatPage() {
       ) : (
         <MessageList 
           messages={messages.slice(-displayLimit)} 
-          loading={loading} 
-          streamingText={streamingText}
-          streamingSources={streamingSources}
-          streamingAttachments={streamingAttachments}
           hasMore={messages.length > displayLimit}
           onLoadMore={() => setDisplayLimit(prev => prev + 10)}
+          onCancel={handleCancel}
         />
       )}
       <div ref={endRef} />

@@ -1,5 +1,5 @@
 import chromadb
-from sqlalchemy import create_engine, Column, Integer, String, DateTime
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 import uuid
@@ -11,9 +11,26 @@ SQLALCHEMY_DATABASE_URL = f"sqlite:///{SQLITE_PATH}"
 engine = create_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
+# Enable WAL mode for concurrent reads/writes
+with engine.connect() as conn:
+    conn.execute(text("PRAGMA journal_mode=WAL;"))
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+class Message(Base):
+    __tablename__ = "messages"
+
+    id = Column(String, primary_key=True)
+    session_id = Column(String, index=True, nullable=False)
+    role = Column(String, nullable=False) # 'user' | 'assistant'
+    content = Column(String, nullable=False, default='')
+    status = Column(String, nullable=False, default='done') # 'generating' | 'done' | 'interrupted'
+    sources = Column(String, nullable=True) # JSON
+    attachments = Column(String, nullable=True) # JSON
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Document(Base):
     __tablename__ = "documents"
