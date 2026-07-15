@@ -35,7 +35,7 @@ def build_index():
     _bm25_index = BM25Okapi(tokenized_corpus)
     print(f"BM25 Index built with {len(_corpus_chunks)} chunks.")
 
-def search(query: str, n: int = 8) -> list[dict]:
+def search(query: str, n: int = 8, category: str = "operational") -> list[dict]:
     """Searches the BM25 index for the query."""
     global _bm25_index, _corpus_chunks
     
@@ -49,14 +49,22 @@ def search(query: str, n: int = 8) -> list[dict]:
     doc_scores = _bm25_index.get_scores(tokenized_query)
     
     # Get top n indices
-    top_n_indices = sorted(range(len(doc_scores)), key=lambda i: doc_scores[i], reverse=True)[:n]
+    top_n_indices = sorted(range(len(doc_scores)), key=lambda i: doc_scores[i], reverse=True)
     
     results = []
     for idx in top_n_indices:
         if doc_scores[idx] > 0:
+            chunk = _corpus_chunks[idx]
+            
+            if category and chunk["metadata"].get("category", "operational") != category:
+                continue
+                
             results.append({
-                "chunk": _corpus_chunks[idx],
+                "chunk": chunk,
                 "score": doc_scores[idx]
             })
+            
+            if len(results) >= n:
+                break
             
     return results

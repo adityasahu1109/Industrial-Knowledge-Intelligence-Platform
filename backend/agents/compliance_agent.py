@@ -18,19 +18,36 @@ def run_compliance_scan(standard_name: str, doc_type: str = "all") -> dict:
     project_root = os.path.dirname(base_dir)
     
     reg_file = None
-    if "OISD" in standard_name:
-        reg_file = os.path.join(project_root, "data", "regulatory", "oisd_117_excerpt.md")
-    elif "Factory Act" in standard_name or "Factory" in standard_name:
-        reg_file = os.path.join(project_root, "data", "regulatory", "factory_act_excerpt.md")
-        
-    if not reg_file or not os.path.exists(reg_file):
-        return {"status": "error", "message": "Regulatory standard not found."}
-        
-    with open(reg_file, 'r', encoding='utf-8') as f:
-        content = f.read()
-        
+    content = ""
+    applies_to = ["sop", "manual", "inspection_report", "p&id", "pfd", "other", "unsupported"]
+    
+    # Check if standard_name is an uploaded document ID
+    db = SessionLocal()
+    from core.database import Document
+    doc = db.query(Document).filter(Document.id == standard_name).first()
+    db.close()
+    
+    if doc:
+        # Load from ChromaDB
+        standard_name = doc.filename
+        results = collection.get(where={"doc_id": doc.id})
+        if results and results["documents"]:
+            # Sort by chunk index or just join
+            # Metadatas usually contain chunk_index, but if not we just join
+            content = "\n\n".join(results["documents"])
+    else:
+        if "OISD" in standard_name:
+            reg_file = os.path.join(project_root, "data", "regulatory", "oisd_117_excerpt.md")
+        elif "Factory Act" in standard_name or "Factory" in standard_name:
+            reg_file = os.path.join(project_root, "data", "regulatory", "factory_act_excerpt.md")
+            
+        if not reg_file or not os.path.exists(reg_file):
+            return {"status": "error", "message": "Regulatory standard not found."}
+            
+        with open(reg_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
     # 2. Parse Frontmatter and Clauses
-    applies_to = ["sop", "manual", "inspection_report", "p&id", "pfd"]
     if content.startswith('---'):
         parts = content.split('---', 2)
         try:
@@ -43,16 +60,22 @@ def run_compliance_scan(standard_name: str, doc_type: str = "all") -> dict:
         
     clauses = []
     blocks = content.split('\n## ')
-    for i, block in enumerate(blocks):
-        if i == 0 and not content.startswith('## '):
-            continue
-        c = '## ' + block if i > 0 else block
-        title = c.split('\n')[0].replace('## ', '').strip()
-        clauses.append({'title': title, 'text': c})
-        
-    if not clauses:
-        # Fallback if no specific clauses found
-        clauses = [{'title': standard_name, 'text': content}]
+    if len(blocks) > 1:
+        for i, block in enumerate(blocks):
+            if i == 0 and not content.startswith('## '):
+                continue
+            c = '## ' + block if i > 0 else block
+            title = c.split('\n')[0].replace('## ', '').strip()
+            clauses.append({'title': title, 'text': c})
+    else:
+        # If no markdown headers, use ChromaDB chunks as clauses if it came from DB
+        if doc and results and results["documents"]:
+            for i, chunk_text in enumerate(results["documents"]):
+                # Limit to first 10 chunks to prevent LLM overload
+                if i >= 10: break
+                clauses.append({'title': f"Section {i+1}", 'text': chunk_text})
+        else:
+            clauses = [{'title': standard_name, 'text': content}]
         
     # Incorporate user-specified document filter (from UI dropdown) if any
     if doc_type and doc_type != "all":

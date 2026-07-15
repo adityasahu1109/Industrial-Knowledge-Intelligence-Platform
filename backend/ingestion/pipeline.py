@@ -127,10 +127,9 @@ def process_drawing(file_path: str, doc_id: str, doc_type: str, filename: str, d
     
     return len(chunks)
 
-def ingest(file_path: str, doc_id: str, doc_type: str, filename: str, job_id: str = None):
+def ingest(file_path: str, doc_id: str, doc_type: str, category: str, filename: str, job_id: str):
     """
-    Orchestrates the full ingestion flow.
-    Runs as a background task.
+    Background task to parse, chunk, embed, and index a document.
     """
     from core.database import Job
     from routers.jobs import publish_sync
@@ -169,20 +168,26 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str, job_id: st
         
         ext = file_path.lower().split('.')[-1]
         
-        # Determine the doc_type automatically
-        print(f"Auto-classifying document: {filename}...")
-        from ingestion.classifier import classify_document
-        predicted_doc_type = classify_document(file_path, filename)
-        
-        print(f"Classification result for {filename}: {predicted_doc_type}")
-        
-        # Update the DB record with the discovered doc_type
-        doc.doc_type = predicted_doc_type
-        db.commit()
-        
-        doc_type = predicted_doc_type
-        
-        log_progress(f"Document classified as: {doc_type}")
+        if category == "standard":
+            doc_type = "standard"
+            doc.doc_type = "standard"
+            db.commit()
+            log_progress("Standard uploaded. Skipping auto-classification.")
+        else:
+            # Determine the doc_type automatically
+            print(f"Auto-classifying document: {filename}...")
+            from ingestion.classifier import classify_document
+            predicted_doc_type = classify_document(file_path, filename)
+            
+            print(f"Classification result for {filename}: {predicted_doc_type}")
+            
+            # Update the DB record with the discovered doc_type
+            doc.doc_type = predicted_doc_type
+            db.commit()
+            
+            doc_type = predicted_doc_type
+            
+            log_progress(f"Document classified as: {doc_type}")
         
         # Branch 1: Drawing Analysis
         if ext in ['png', 'jpg', 'jpeg'] or doc_type in ["p&id", "pfd", "pid"]:
@@ -222,6 +227,7 @@ def ingest(file_path: str, doc_id: str, doc_type: str, filename: str, job_id: st
             "doc_id": doc_id,
             "filename": filename,
             "doc_type": doc_type,
+            "category": category,
             "date_ingested": datetime.utcnow().isoformat()
         }
         chunks = chunk_document(pages, doc_metadata)

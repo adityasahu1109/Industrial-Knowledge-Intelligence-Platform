@@ -38,7 +38,8 @@ class Document(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     filename = Column(String, nullable=False)
     file_type = Column(String, nullable=False)
-    doc_type = Column(String, nullable=True) # 'inspection_report', 'sop', 'manual', 'drawing'
+    doc_type = Column(String, nullable=True) # 'inspection_report', 'sop', 'manual', 'drawing', etc.
+    category = Column(String, nullable=False, default="operational") # 'operational' or 'standard'
     status = Column(String, default='pending') # 'pending', 'processing', 'complete', 'failed'
     chunk_count = Column(Integer, default=0)
     entity_count = Column(Integer, default=0)

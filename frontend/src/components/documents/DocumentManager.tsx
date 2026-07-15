@@ -8,6 +8,7 @@ export function DocumentManager() {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'operational' | 'standard'>('operational');
 
   const loadDocuments = async () => {
     try {
@@ -89,11 +90,14 @@ export function DocumentManager() {
     }
   };
 
+  // Filter documents by active tab
+  const filteredDocs = documents.filter(d => (d.category || 'operational') === activeTab);
+
   // Stats calculation
-  const totalDocs = documents.length;
-  const totalChunks = documents.reduce((acc, doc) => acc + (doc.chunk_count || 0), 0);
-  const completedDocs = documents.filter(d => d.status === 'complete').length;
-  const processingDocs = documents.filter(d => d.status === 'processing' || d.status === 'pending').length;
+  const totalDocs = filteredDocs.length;
+  const totalChunks = filteredDocs.reduce((acc, doc) => acc + (doc.chunk_count || 0), 0);
+  const completedDocs = filteredDocs.filter(d => d.status === 'complete').length;
+  const processingDocs = filteredDocs.filter(d => d.status === 'processing' || d.status === 'pending').length;
 
   return (
     <div className="max-w-6xl mx-auto h-full flex flex-col gap-6 p-6">
@@ -130,6 +134,29 @@ export function DocumentManager() {
       <UploadDropzone onUploadSuccess={loadDocuments} />
 
       <div className="bg-surface-alt border border-border rounded-xl overflow-hidden flex-1 flex flex-col min-h-[400px] relative">
+        <div className="flex items-center gap-6 border-b border-border px-6">
+          <button
+            onClick={() => setActiveTab('operational')}
+            className={`py-4 text-[13px] font-semibold transition-colors border-b-2 ${
+              activeTab === 'operational'
+                ? 'text-primary border-primary'
+                : 'text-text-muted border-transparent hover:text-text'
+            }`}
+          >
+            Operational Data
+          </button>
+          <button
+            onClick={() => setActiveTab('standard')}
+            className={`py-4 text-[13px] font-semibold transition-colors border-b-2 ${
+              activeTab === 'standard'
+                ? 'text-primary border-primary'
+                : 'text-text-muted border-transparent hover:text-text'
+            }`}
+          >
+            Standards & Regulations
+          </button>
+        </div>
+        
         <div className="grid grid-cols-12 gap-4 p-4 border-b border-border text-[11px] uppercase tracking-wider text-text-dim bg-surface-alt sticky top-0 z-10 shadow-sm">
           <div className="col-span-5 font-semibold flex items-center gap-3">
             <button 
@@ -164,10 +191,10 @@ export function DocumentManager() {
               <Loader2 size={32} className="animate-spin mb-4 opacity-50" />
               <span>Loading document base...</span>
             </div>
-          ) : documents.length === 0 ? (
-            <div className="p-12 text-center text-text-muted">No documents uploaded yet.</div>
+          ) : filteredDocs.length === 0 ? (
+            <div className="p-12 text-center text-text-muted">No documents found in this category.</div>
           ) : (
-            documents.map(doc => (
+            filteredDocs.map(doc => (
               <div key={doc.doc_id} className={`grid grid-cols-12 gap-4 p-4 border-b border-border/50 items-center hover:bg-surface-hover transition-colors ${selectedDocs.has(doc.doc_id) ? 'bg-primary/5' : ''}`}>
                 <div className="col-span-5 flex items-center gap-3 truncate">
                   <button 

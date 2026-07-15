@@ -19,7 +19,7 @@ def add_chunks(chunks: list[dict], embeddings: list[list[float]]):
         metadatas=metadatas
     )
 
-def semantic_search(query: str, n: int = 8, doc_ids: list[str] = None) -> list[dict]:
+def semantic_search(query: str, n: int = 8, doc_ids: list[str] = None, category: str = "operational") -> list[dict]:
     """
     Searches ChromaDB for the query.
     Returns list of dicts matching chunk format.
@@ -27,12 +27,23 @@ def semantic_search(query: str, n: int = 8, doc_ids: list[str] = None) -> list[d
     collection = get_collection()
     query_embedding = embed(query)
     
-    where = None
+    where_clauses = []
+    
+    if category:
+        where_clauses.append({"category": category})
+        
     if doc_ids:
         if len(doc_ids) == 1:
-            where = {"doc_id": doc_ids[0]}
+            where_clauses.append({"doc_id": doc_ids[0]})
         else:
-            where = {"doc_id": {"$in": doc_ids}}
+            where_clauses.append({"doc_id": {"$in": doc_ids}})
+            
+    if len(where_clauses) == 1:
+        where = where_clauses[0]
+    elif len(where_clauses) > 1:
+        where = {"$and": where_clauses}
+    else:
+        where = None
             
     results = collection.query(
         query_embeddings=[query_embedding],

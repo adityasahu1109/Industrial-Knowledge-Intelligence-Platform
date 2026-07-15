@@ -13,6 +13,7 @@ async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     doc_type: str = Form("auto"),
+    category: str = Form("operational"),
     db: Session = Depends(get_db)
 ):
     from core.database import Job
@@ -33,6 +34,7 @@ async def upload_document(
         filename=filename,
         file_type=ext,
         doc_type=doc_type,
+        category=category,
         status="pending"
     )
     db.add(db_doc)
@@ -42,14 +44,17 @@ async def upload_document(
     db.commit()
     
     # Launch async ingestion
-    background_tasks.add_task(ingest, file_path, doc_id, doc_type, filename, job_id)
+    background_tasks.add_task(ingest, file_path, doc_id, doc_type, category, filename, job_id)
     
     return {"doc_id": doc_id, "job_id": job_id, "status": "processing"}
 
 @router.get("")
-def list_documents(db: Session = Depends(get_db)):
-    docs = db.query(Document).order_by(Document.uploaded_at.desc()).all()
-    return [{"doc_id": d.id, "filename": d.filename, "doc_type": d.doc_type, "status": d.status, "chunk_count": d.chunk_count, "entity_count": d.entity_count} for d in docs]
+def list_documents(category: str = None, db: Session = Depends(get_db)):
+    query = db.query(Document)
+    if category:
+        query = query.filter(Document.category == category)
+    docs = query.order_by(Document.uploaded_at.desc()).all()
+    return [{"doc_id": d.id, "filename": d.filename, "doc_type": d.doc_type, "category": d.category, "status": d.status, "chunk_count": d.chunk_count, "entity_count": d.entity_count} for d in docs]
 
 @router.get("/{doc_id}/status")
 def get_document_status(doc_id: str, db: Session = Depends(get_db)):

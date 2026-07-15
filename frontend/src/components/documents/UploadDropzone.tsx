@@ -8,6 +8,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   const [error, setError] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(() => sessionStorage.getItem('active_upload_job'));
   const [jobStatus, setJobStatus] = useState<string>('Uploading and processing...');
+  const [category, setCategory] = useState<string>('operational');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -130,6 +131,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
       const formData = new FormData();
       formData.append("file", file);
       formData.append("doc_type", "auto");
+      formData.append("category", category);
       
       try {
         const data = await fetchJson("/documents/upload", {
@@ -152,10 +154,25 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] font-semibold tracking-wider text-text-muted bg-surface-page px-3 py-1.5 border border-border">
           <FileType size={14} />
-          <span className="uppercase">Auto-classification Active</span>
+          <span className="uppercase">{category === 'operational' ? 'Auto-classification Active' : 'Standard Upload Mode'}</span>
+        </div>
+        
+        <div className="flex items-center gap-2 bg-surface-alt border border-border rounded-md p-1">
+          <button 
+            onClick={() => setCategory('operational')}
+            className={`px-3 py-1.5 text-xs font-medium rounded ${category === 'operational' ? 'bg-primary text-white' : 'text-text hover:bg-surface-page'}`}
+          >
+            Operational Document
+          </button>
+          <button 
+            onClick={() => setCategory('standard')}
+            className={`px-3 py-1.5 text-xs font-medium rounded ${category === 'standard' ? 'bg-primary text-white' : 'text-text hover:bg-surface-page'}`}
+          >
+            Regulatory Standard
+          </button>
         </div>
       </div>
       

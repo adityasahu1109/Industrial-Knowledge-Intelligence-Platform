@@ -8,6 +8,7 @@ export function ComplianceDashboard() {
   const [scanning, setScanning] = useState(false);
   const [report, setReport] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploadedStandards, setUploadedStandards] = useState<any[]>([]);
 
   const [recentScans, setRecentScans] = useState<any[]>([]);
   const [expandedClauses, setExpandedClauses] = useState<Record<number, boolean>>({});
@@ -26,6 +27,11 @@ export function ComplianceDashboard() {
     if (activeJob) {
       pollJob(activeJob);
     }
+    
+    // Fetch dynamic standards
+    fetchJson('/documents?category=standard')
+      .then(data => setUploadedStandards(data))
+      .catch(e => console.error("Failed to load standards", e));
   }, []);
 
   const pollJob = async (jobId: string) => {
@@ -178,8 +184,17 @@ export function ComplianceDashboard() {
                 className="w-full bg-surface border border-border rounded-lg px-3 py-2 text-sm text-text focus:outline-none focus:border-primary/50 transition-colors"
                 disabled={scanning}
               >
-                <option value="OISD Standard 117">OISD Standard 117 (Pressure Vessels)</option>
-                <option value="Factory Act 1948">Factory Act 1948 (Hazardous Processes)</option>
+                <optgroup label="Default Standards">
+                  <option value="OISD Standard 117">OISD Standard 117 (Pressure Vessels)</option>
+                  <option value="Factory Act 1948">Factory Act 1948 (Hazardous Processes)</option>
+                </optgroup>
+                {uploadedStandards.length > 0 && (
+                  <optgroup label="Uploaded Standards">
+                    {uploadedStandards.map(std => (
+                      <option key={std.doc_id} value={std.doc_id}>{std.filename}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
 
