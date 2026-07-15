@@ -11,74 +11,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   const [category, setCategory] = useState<string>('operational');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    if (!activeJobId) return;
-    
-    let isMounted = true;
-    const abortController = new AbortController();
-    
-    const streamProgress = async () => {
-      setUploading(true);
-      try {
-        const resp = await fetch(`http://localhost:8000/api/jobs/${activeJobId}/stream`, {
-          signal: abortController.signal
-        });
-        
-        if (!resp.ok) throw new Error("Failed to stream job");
-        
-        const reader = resp.body!.getReader();
-        const decoder = new TextDecoder();
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          
-          const lines = decoder.decode(value).split("\n");
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const payloadStr = line.slice(6).trim();
-            if (!payloadStr) continue;
-            
-            try {
-              const payload = JSON.parse(payloadStr);
-              if (payload.type === 'progress') {
-                if (isMounted) setJobStatus(payload.message);
-              } else if (payload.done || payload.type === 'done' || payload.type === 'error') {
-                if (isMounted) {
-                  setUploading(false);
-                  sessionStorage.removeItem('active_upload_job');
-                  setActiveJobId(null);
-                  setJobStatus('Uploading and processing...');
-                  onUploadSuccess();
-                }
-                return;
-              }
-            } catch (e) {
-              console.error("Parse error", e);
-            }
-          }
-        }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error("Stream error", err);
-          if (isMounted) {
-             setUploading(false);
-             sessionStorage.removeItem('active_upload_job');
-             setActiveJobId(null);
-             setJobStatus('Uploading and processing...');
-             onUploadSuccess();
-          }
-        }
-      }
-    };
-    
-    streamProgress();
-    
-    return () => {
-      isMounted = false;
-      abortController.abort();
-    };
-  }, [activeJobId, onUploadSuccess]);
+  // We no longer use a global useEffect for streaming to support multiple sequential files
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -101,7 +34,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   };
 
   const handleUploadAll = async (files: File[]) => {
-    if (activeJobId) return; // Prevent multiple concurrent uploads for now
+    if (activeJobId) return; // Prevent concurrent batch uploads
     
     const allowedTypes = [
       "application/pdf", 
@@ -125,9 +58,11 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
     }
     
     setUploading(true);
-    setJobStatus('Initializing upload...');
     
-    for (const file of validFiles) {
+    for (let i = 0; i < validFiles.length; i++) {
+      const file = validFiles[i];
+      setJobStatus(`Uploading ${file.name} (${i + 1}/${validFiles.length})...`);
+      
       const formData = new FormData();
       formData.append("file", file);
       formData.append("doc_type", "auto");
@@ -140,16 +75,60 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
         });
         
         if (data.job_id) {
-          sessionStorage.setItem('active_upload_job', data.job_id);
-          setActiveJobId(data.job_id);
-          // Wait for this job to stream to completion via useEffect
-          return; // only handle first file for simplicity in demo session system
+          const jobId = data.job_id;
+          setActiveJobId(jobId);
+          sessionStorage.setItem('active_upload_job', jobId);
+          
+          // Await stream completion for this file
+          await new Promise<void>(async (resolve) => {
+            try {
+              const resp = await fetch(`http://localhost:8000/api/jobs/${jobId}/stream`);
+              if (!resp.ok) throw new Error("Failed to stream job");
+              
+              const reader = resp.body!.getReader();
+              const decoder = new TextDecoder();
+              
+              while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                const lines = decoder.decode(value).split("\n");
+                for (const line of lines) {
+                  if (!line.startsWith("data: ")) continue;
+                  const payloadStr = line.slice(6).trim();
+                  if (!payloadStr) continue;
+                  
+                  try {
+                    const payload = JSON.parse(payloadStr);
+                    if (payload.type === 'progress') {
+                      setJobStatus(`[${i + 1}/${validFiles.length}] ${payload.message}`);
+                    } else if (payload.done || payload.type === 'done' || payload.type === 'error') {
+                      resolve();
+                      return;
+                    }
+                  } catch (e) {
+                    console.error("Parse error", e);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error("Stream error", err);
+              resolve();
+            }
+          });
+          
+          sessionStorage.removeItem('active_upload_job');
+          onUploadSuccess(); // Refresh the list after each file
         }
       } catch (err: any) {
         console.error("Failed to upload", file.name, err);
-        setUploading(false);
       }
     }
+    
+    // Done with all files
+    setUploading(false);
+    setActiveJobId(null);
+    setJobStatus('Uploading and processing...');
   };
 
   return (

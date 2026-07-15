@@ -190,10 +190,11 @@ def ingest(file_path: str, doc_id: str, doc_type: str, category: str, filename: 
             log_progress(f"Document classified as: {doc_type}")
         
         # Branch 1: Drawing Analysis
-        if ext in ['png', 'jpg', 'jpeg'] or doc_type in ["p&id", "pfd", "pid"]:
+        if ext in ['png', 'jpg', 'jpeg'] or doc_type in ["p&id", "pfd", "pid", "generic_drawing"]:
             log_progress("Analyzing drawing components and topology...")
+            
             if doc_type.lower() in ["unsupported", "other"]:
-                raise ValueError("Unsupported drawing type.")
+                raise ValueError("Unsupported or irrelevant image type detected.")
                 
             chunk_count = process_drawing(file_path, doc_id, doc_type, filename, db)
             doc.chunk_count = chunk_count

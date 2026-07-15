@@ -2,7 +2,7 @@ import base64
 import os
 from core.ollama_client import vision_analyze, chat_json
 
-VALID_DOC_TYPES = ["p&id", "pfd", "manual", "sop", "inspection_report", "other"]
+VALID_DOC_TYPES = ["p&id", "pfd", "generic_drawing", "manual", "sop", "inspection_report", "other"]
 
 def classify_document(file_path: str, filename: str) -> str:
     """
@@ -36,10 +36,11 @@ def classify_document(file_path: str, filename: str) -> str:
             Categorize this document exactly as ONE of the following categories:
             - p&id (Piping and Instrumentation Diagram / Schematic)
             - pfd (Process Flow Diagram)
+            - generic_drawing (Block Flow Diagram, Electrical, HVAC, or other industrial schematic)
             - manual (Equipment Manual / Datasheet)
             - sop (Standard Operating Procedure)
             - inspection_report (Maintenance or Inspection Report)
-            - other (Any other document)
+            - other (Any other non-industrial or irrelevant document)
             
             Return ONLY the category name exactly as written above, with no additional text or punctuation.
             """
@@ -53,6 +54,8 @@ def classify_document(file_path: str, filename: str) -> str:
                 return "p&id"
             if "pfd" in result:
                 return "pfd"
+            if "generic" in result or "drawing" in result:
+                return "generic_drawing"
             if "manual" in result:
                 return "manual"
             if "sop" in result:

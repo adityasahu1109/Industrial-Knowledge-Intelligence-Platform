@@ -3,11 +3,12 @@ import json
 from core.ollama_client import vision_analyze
 from drawing.tiler import tile_image
 
-# Regex to validate standard industrial tags
-TAG_REGEX = re.compile(r'^[A-Z]{1,4}-?\d{2,4}[A-Z]?$')
+# Regex to validate standard industrial tags or descriptive block names
+TAG_REGEX = re.compile(r'^([A-Za-z0-9\-\s_]+)$')
 
 def is_valid_tag(tag: str) -> bool:
-    return bool(TAG_REGEX.match(tag))
+    # Relaxed to allow descriptive names (e.g. "Filtration Unit") between 2 and 40 chars
+    return bool(TAG_REGEX.match(tag)) and 2 <= len(tag) <= 40
 
 def extract_drawing_data(base64_image: str) -> dict:
     """
@@ -16,7 +17,7 @@ def extract_drawing_data(base64_image: str) -> dict:
     """
     
     title_prompt = """
-    Analyze this tile of a Piping and Instrumentation Diagram (P&ID) or industrial schematic.
+    Analyze this tile of an industrial schematic (e.g., P&ID, Process Flow Diagram, Block Flow Diagram, Electrical, HVAC).
     Extract the title block information. 
     Return ONLY a JSON object exactly like this:
     {
@@ -30,17 +31,17 @@ def extract_drawing_data(base64_image: str) -> dict:
     """
     
     comp_prompt = """
-    Analyze this tile of a Piping and Instrumentation Diagram (P&ID) or industrial schematic.
+    Analyze this tile of an industrial schematic (e.g., P&ID, PFD, Block Flow Diagram, Electrical).
     Identify all equipment, instruments, valves, and their connections.
     Return ONLY a JSON object exactly like this, with NO other text:
     {
-      "equipment": ["P-101", "V-205"],
+      "equipment": ["P-101", "Filtration Unit", "V-205"],
       "instruments": ["FIC-201", "TT-105"],
       "valves": ["HV-201"],
-      "connections": [{"from": "P-101", "to": "V-205", "type": "process"}]
+      "connections": [{"from": "Filtration Unit", "to": "V-205", "type": "process"}]
     }
     Do not include dimensional lines. Do not use quotes in your tag names inside the strings.
-    Use standard tag formats (e.g., P-101).
+    Use standard tag formats (e.g., P-101) OR descriptive names (e.g., Reverse Osmosis Unit) if tags are absent.
     If nothing is found, return empty arrays.
     """
     

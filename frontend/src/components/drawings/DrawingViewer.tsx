@@ -20,7 +20,7 @@ export function DrawingViewer({ initialDrawingId }: DrawingViewerProps) {
       .then(data => {
         const d = data.filter((doc: any) => 
           doc.status === 'complete' && 
-          ['p&id', 'pfd', 'pid'].includes(doc.doc_type?.toLowerCase())
+          ['p&id', 'pfd', 'pid', 'generic_drawing'].includes(doc.doc_type?.toLowerCase())
         );
         setDrawings(d);
         if (!selectedDrawingId && d.length > 0) {
