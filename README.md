@@ -35,11 +35,16 @@
 | Component | Technology | Purpose |
 |---|---|---|
 | **Frontend** | React 19, Vite 8, TypeScript, Tailwind CSS 4 | UI for document management, chat, and graph visualization |
-| **Backend** | FastAPI, Python 3.14 | REST API, ingestion pipeline, RAG orchestration |
+| **Backend** | FastAPI, Python 3.14 | REST API, ingestion pipeline, RAG orchestration, Compliance Scanning |
 | **LLM** | Ollama (llama3.1:8b, nomic-embed-text) | Local inference for chat, embeddings, and entity extraction |
-| **Vector DB** | ChromaDB (embedded) | Stores document chunk embeddings for semantic search |
+| **Vector DB** | ChromaDB (embedded) | Stores operational documents and dynamically uploaded regulatory standards |
 | **Graph DB** | Neo4j (Docker) | Stores extracted entities and relationships as a Knowledge Graph |
-| **Metadata DB** | SQLite | Tracks document upload status, chunk counts, metadata |
+| **Metadata DB** | SQLite | Tracks document upload status, categories, chunk counts, metadata |
+
+### Key Features
+- **Dynamic RAG Chat:** Converses natively with your operational manuals, SOPs, and inspection reports.
+- **Compliance Gap Scanner:** Upload custom Regulatory Standards (e.g., OSHA, ISO) and the system automatically audits your operational base clause-by-clause against it.
+- **Drawing Topology Analyzer:** Ingests P&ID / PFD schematics to extract equipment tags and connection pipelines into a Knowledge Graph.
 
 ---
 

@@ -1,32 +1,31 @@
-# React + TypeScript + Vite
+# Industrial Knowledge Intelligence Platform - Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+This is the frontend client for the Industrial Knowledge Intelligence Platform, built with React 19, Vite, TypeScript, and Tailwind CSS.
 
-Currently, two official plugins are available:
+## Key Modules
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Chat Interface**: Located in `src/components/chat/`. Implements real-time Markdown streaming and custom citation handling (`[1](#source-1)`).
+- **Document Manager**: Located in `src/components/documents/`. Handles Drag-and-Drop uploads, isolating standard regulations from operational data.
+- **Compliance Dashboard**: Located in `src/components/compliance/`. Interacts with the backend to trigger and poll clause-by-clause standard audits.
+- **Knowledge Graph Explorer**: Located in `src/components/graph/`. Uses D3 or React Flow to visualize entity relationships pulled from Neo4j.
 
-## React Compiler
+## Development Server
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+To run the frontend locally:
 
-## Expanding the Oxlint configuration
+```bash
+# 1. Install dependencies
+npm install
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+# 2. Run the Vite dev server
+npm run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+The application will be available at `http://localhost:5173`.
+
+## Styling & Theming
+
+The platform implements a highly polished, professional "BHEL" industrial theme:
+- The design system tokens (colors, radii, shadows) are defined in `src/index.css`.
+- We use Tailwind CSS v4 alongside `@tailwindcss/typography` for rich chat prose rendering.
+- Ensure strict adherence to the defined CSS variables (`--color-primary`, `--color-surface`, etc.) to maintain the premium dark/light mode experience.
