@@ -21,7 +21,7 @@ export function CitationLink({ href, children, sources = [] }: CitationLinkProps
         {/* Tooltip */}
         {source && (
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-[250px] opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-            <span className="block bg-surface-raised border border-border text-text text-xs p-2 rounded shadow-lg">
+            <span className="block bg-surface-alt border border-border text-text text-xs p-2 rounded shadow-lg">
               <strong className="block text-primary mb-1">Source {sourceIndex + 1}</strong>
               <span className="block truncate">{source.filename}</span>
               <span className="block text-text-dim mt-0.5">Page {source.page}</span>

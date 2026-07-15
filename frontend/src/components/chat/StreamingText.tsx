@@ -9,20 +9,27 @@ interface StreamingTextProps {
   sources?: any[];
 }
 
+const normalizeCitations = (text: string) => {
+  if (!text) return text;
+  let normalized = text.replace(/\[Source\s*(\d+)[^\]]*\]/gi, '[$1](#source-$1)');
+  normalized = normalized.replace(/Source\s*(\d+)\s*\([^\)]+\)/gi, '[$1](#source-$1)');
+  return normalized;
+};
+
 export function StreamingText({ text, loading, sources = [] }: StreamingTextProps) {
   return (
-    <div className="chat-prose">
+    <>
       <ReactMarkdown 
         remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           a: (props) => <CitationLink {...props} sources={sources} />
         }}
       >
-        {text}
+        {normalizeCitations(text)}
       </ReactMarkdown>
       {loading && (
         <span className="inline-block w-2 h-4 ml-1 bg-primary animate-pulse align-middle" />
       )}
-    </div>
+    </>
   );
 }

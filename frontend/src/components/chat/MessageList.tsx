@@ -19,6 +19,13 @@ interface MessageListProps {
   onCancel?: () => void;
 }
 
+const normalizeCitations = (text: string) => {
+  if (!text) return text;
+  let normalized = text.replace(/\[Source\s*(\d+)[^\]]*\]/gi, '[$1](#source-$1)');
+  normalized = normalized.replace(/Source\s*(\d+)\s*\([^\)]+\)/gi, '[$1](#source-$1)');
+  return normalized;
+};
+
 export function MessageList({ messages, hasMore, onLoadMore, onCancel }: MessageListProps) {
   
   // Helper to format timestamp from id
@@ -66,7 +73,7 @@ export function MessageList({ messages, hasMore, onLoadMore, onCancel }: Message
                   ? 'bg-red-500/5 border border-red-500/20 rounded-2xl rounded-tl-sm text-text'
                   : 'bg-surface-alt border border-border rounded-2xl rounded-tl-sm text-text'
             }`}>
-              <div className="chat-prose">
+              <div className="prose prose-slate max-w-none text-sm leading-relaxed prose-pre:bg-slate-900 prose-pre:text-slate-50 prose-a:text-primary">
                 {msg.role === 'assistant' ? (
                   msg.status === 'generating' ? (
                     <StreamingText text={msg.content} loading={true} sources={msg.sources || []} />
@@ -77,7 +84,7 @@ export function MessageList({ messages, hasMore, onLoadMore, onCancel }: Message
                         a: (props) => <CitationLink {...props} sources={msg.sources} />
                       }}
                     >
-                      {msg.content}
+                      {normalizeCitations(msg.content)}
                     </ReactMarkdown>
                   )
                 ) : (
