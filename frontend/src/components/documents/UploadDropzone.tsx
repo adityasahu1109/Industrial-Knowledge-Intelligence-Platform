@@ -6,12 +6,10 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeJobId, setActiveJobId] = useState<string | null>(() => sessionStorage.getItem('active_upload_job'));
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [jobStatus, setJobStatus] = useState<string>('Uploading and processing...');
   const [category, setCategory] = useState<string>('operational');
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // We no longer use a global useEffect for streaming to support multiple sequential files
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -77,7 +75,6 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
         if (data.job_id) {
           const jobId = data.job_id;
           setActiveJobId(jobId);
-          sessionStorage.setItem('active_upload_job', jobId);
           
           // Await stream completion for this file
           await new Promise<void>(async (resolve) => {
@@ -87,12 +84,18 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
               
               const reader = resp.body!.getReader();
               const decoder = new TextDecoder();
+              let buffer = "";
               
               while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
                 
-                const lines = decoder.decode(value).split("\n");
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                
+                // Keep the last partial line in the buffer
+                buffer = lines.pop() || "";
+                
                 for (const line of lines) {
                   if (!line.startsWith("data: ")) continue;
                   const payloadStr = line.slice(6).trim();
@@ -107,7 +110,7 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
                       return;
                     }
                   } catch (e) {
-                    console.error("Parse error", e);
+                    console.error("Parse error on payload:", payloadStr, e);
                   }
                 }
               }
@@ -117,7 +120,6 @@ export function UploadDropzone({ onUploadSuccess }: { onUploadSuccess: () => voi
             }
           });
           
-          sessionStorage.removeItem('active_upload_job');
           onUploadSuccess(); // Refresh the list after each file
         }
       } catch (err: any) {

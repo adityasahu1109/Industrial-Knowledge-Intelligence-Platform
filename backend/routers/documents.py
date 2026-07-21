@@ -63,6 +63,27 @@ def get_document_status(doc_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Document not found")
     return {"doc_id": doc.id, "status": doc.status, "chunk_count": doc.chunk_count}
 
+from fastapi.responses import FileResponse
+
+@router.get("/{doc_id}/content")
+def get_document_content(doc_id: str, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == doc_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    file_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{doc.file_type}")
+    
+    # If it was a PDF drawing, we might have converted it to a PNG during ingestion
+    if doc.file_type == 'pdf':
+        png_path = os.path.join(UPLOAD_DIR, f"{doc_id}.png")
+        if os.path.exists(png_path):
+            return FileResponse(png_path)
+            
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found on disk")
+        
+    return FileResponse(file_path)
+
 @router.delete("/{doc_id}")
 def delete_document(doc_id: str, db: Session = Depends(get_db)):
     doc = db.query(Document).filter(Document.id == doc_id).first()

@@ -178,7 +178,7 @@ NEO4J_PASSWORD=industrial2026
 ```bash
 cd backend
 .\venv\Scripts\Activate.ps1   # Activate the venv if not already active
-uvicorn main:app --reload
+uvicorn main:app
 ```
 
 The API will be running at **http://localhost:8000**. On startup, the server will automatically:
@@ -364,7 +364,7 @@ The key insight is this: **any organisation that accumulates large volumes of te
 ```bash
 # Start everything (run each in a separate terminal):
 docker-compose up -d                                              # 1. Neo4j
-cd backend && .\venv\Scripts\Activate.ps1 && uvicorn main:app --reload   # 2. Backend
+cd backend && .\venv\Scripts\Activate.ps1 && uvicorn main:app   # 2. Backend
 cd frontend && npm run dev                                        # 3. Frontend
 ```
 
