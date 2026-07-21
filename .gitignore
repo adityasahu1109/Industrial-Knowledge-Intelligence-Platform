@@ -33,11 +33,3 @@ Thumbs.db
 
 # Docker
 neo4j_data/
-
-# Documentation / Design (Excluded)
-design.md
-compliance_redesign.md
-drawing_analyzer_redesign.md
-session_and_chat_visuals.md
-chat_streaming_implementation_instructions.md
-industrial_knowledge_intelligence_blueprint.md
