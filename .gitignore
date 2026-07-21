@@ -33,3 +33,6 @@ Thumbs.db
 
 # Docker
 neo4j_data/
+
+# Misc
+problems.pdf
